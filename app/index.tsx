@@ -2,7 +2,6 @@ import React from "react";
 import Gradient from "@/assets/icons/Gradient";
 import Logo from "@/assets/icons/Logo";
 import { Box } from "@/components/ui/box";
-import { ScrollView } from "react-native";
 import { Text } from "@/components/ui/text";
 
 import { Button, ButtonText } from "@/components/ui/button";
@@ -31,10 +30,6 @@ export default function Home() {
       <Box className="absolute h-[500px] w-[500px] lg:w-[700px] lg:h-[700px]">
         <Gradient />
       </Box>
-      {/* <ScrollView
-        style={{ height: '100%' }}
-        contentContainerStyle={{ flexGrow: 1 }}
-      > */}
       <Box className="flex flex-1 items-center mx-5 lg:my-24 lg:mx-32 py-safe">
         <Box className="gap-10 base:flex-col sm:flex-row justify-between sm:w-[80%] md:flex-1">
           <Box className="bg-background-template py-2 px-6 rounded-full items-center flex-column md:flex-row md:self-start">
@@ -59,7 +54,6 @@ export default function Home() {
           <Logo />
         </Box>
       </Box>
-      {/* </ScrollView> */}
     </Box>
   );
 }
