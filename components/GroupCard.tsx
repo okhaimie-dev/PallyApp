@@ -32,12 +32,12 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, onPress }) => {
       {({ pressed }) => (
         <Box
           className={`${
-            pressed ? "bg-background-800" : "bg-background-900"
-          } p-4 rounded-lg mb-4 border border-background-700`}
+            pressed ? "bg-gray-800" : "bg-gray-900"
+          } p-4 rounded-lg mb-4 border border-gray-700`}
         >
           <HStack className="space-x-4 items-center">
             {/* Left Section: Avatar */}
-            <Box className="w-16 h-16 bg-background-700 rounded-full items-center justify-center">
+            <Box className="w-16 h-16 bg-gray-700 rounded-full items-center justify-center">
               <Avatar size="lg">
                 <AvatarFallbackText>
                   {group.name.substring(0, 2).toUpperCase()}
@@ -47,24 +47,22 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, onPress }) => {
 
             {/* Middle Section: Group Details */}
             <VStack className="flex-1 space-y-2">
-              <Text className="text-xl font-bold text-text-50">
-                {group.name}
-              </Text>
+              <Text className="text-xl font-bold text-white">{group.name}</Text>
               <HStack className="items-center space-x-2">
-                <Icon as={GlobeIcon} className="w-4 h-4 text-text-300" />
-                <Text className="text-sm text-text-300">
+                <Icon as={GlobeIcon} className="w-4 h-4 text-gray-300" />
+                <Text className="text-sm text-gray-300">
                   {group.direction || "Horizontal"}
                 </Text>
               </HStack>
               <HStack className="items-center space-x-2">
-                <Icon as={AvatarImage} className="w-4 h-4 text-text-300" />
-                <Text className="text-sm text-text-300">
+                <Icon as={AvatarImage} className="w-4 h-4 text-gray-300" />
+                <Text className="text-sm text-gray-300">
                   Member count: {group.memberCount}
                 </Text>
               </HStack>
               <HStack className="items-center space-x-2">
-                <Icon as={AvatarImage} className="w-4 h-4 text-text-300" />
-                <Text className="text-sm text-text-300">
+                <Icon as={AvatarImage} className="w-4 h-4 text-gray-300" />
+                <Text className="text-sm text-gray-300">
                   Activity: {group.activity}
                 </Text>
               </HStack>
@@ -74,7 +72,7 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, onPress }) => {
           {/* Hashtags Section */}
           <HStack className="flex-wrap mt-3 space-x-2">
             {group.tags?.map((tag, index) => (
-              <Text key={index} className="text-xs text-primary-300">
+              <Text key={index} className="text-xs text-blue-400">
                 #{tag}
               </Text>
             ))}
