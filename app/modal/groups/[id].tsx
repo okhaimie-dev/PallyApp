@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Box } from "@/components/ui/box";
 import { Heading } from "@/components/ui/heading";
 import { Text } from "@/components/ui/text";
@@ -7,6 +7,17 @@ import { useLocalSearchParams } from "expo-router";
 import { ScrollView } from "react-native";
 import MemberListItem from "@/components/MemberListItem";
 import { MOCK_GROUPS } from "@/utils/mockData";
+import {
+  Modal,
+  ModalBackdrop,
+  ModalContent,
+  ModalHeader,
+  ModalCloseButton,
+  ModalBody,
+  ModalFooter,
+} from "@/components/ui/modal";
+import { Button, ButtonText } from "@/components/ui/button";
+import { Icon, CloseIcon } from "@/components/ui/icon";
 
 interface Member {
   id: string;
@@ -24,15 +35,20 @@ const MOCK_MEMBERS: Member[] = [
 
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const [showModal, setShowModal] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
 
   const handlePressMember = (memberId: string) => {
     console.log(`Tapping on member: ${memberId}`);
+    const member = MOCK_MEMBERS.find((m) => m.id === memberId);
+    if (member) {
+      setSelectedMember(member);
+      setShowModal(true);
+    }
   };
 
-  // Find the group from MOCK_GROUPS
   const group = MOCK_GROUPS.find((g) => g.id === id);
 
-  // If group is not found, show error state
   if (!group) {
     return (
       <Box className="flex-1 bg-black pt-16 px-4">
@@ -62,6 +78,53 @@ export default function GroupDetailScreen() {
           ))}
         </VStack>
       </ScrollView>
+
+      {/* Member Action Modal */}
+      <Modal
+        isOpen={showModal}
+        onClose={() => {
+          setShowModal(false);
+          setSelectedMember(null);
+        }}
+        size="lg"
+      >
+        <ModalBackdrop />
+        <ModalContent>
+          <ModalHeader>
+            <Heading size="lg">Member Actions</Heading>
+            <ModalCloseButton>
+              <Icon as={CloseIcon} />
+            </ModalCloseButton>
+          </ModalHeader>
+          <ModalBody>
+            <Text className="text-lg mb-4">
+              What would you like to do with {selectedMember?.name}?
+            </Text>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              variant="outline"
+              action="secondary"
+              className="mr-3"
+              onPress={() => {
+                setShowModal(false);
+                setSelectedMember(null);
+              }}
+            >
+              <ButtonText>Cancel</ButtonText>
+            </Button>
+            <Button
+              onPress={() => {
+                console.log(`Taking action on member: ${selectedMember?.name}`);
+                setShowModal(false);
+                setSelectedMember(null);
+              }}
+            >
+              <ButtonText>Send Tip</ButtonText>
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 }
