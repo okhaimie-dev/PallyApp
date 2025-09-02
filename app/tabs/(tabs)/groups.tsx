@@ -42,14 +42,32 @@ const MOCK_GROUPS: Group[] = [
     tags: ["Cairo", "Starknet", "Scaling"],
     potSize: "$120",
   },
+  {
+    id: "group4",
+    name: "Wild Builders",
+    direction: "Horizontal",
+    memberCount: 15,
+    activity: "Very High",
+    tags: ["Cairo", "Starknet", "Scaling"],
+    potSize: "$40",
+  },
+  {
+    id: "group5",
+    name: "Wild Chickens",
+    direction: "Horizontal",
+    memberCount: 15,
+    activity: "Very High",
+    tags: ["Cairo", "Starknet", "Scaling"],
+    potSize: "$40",
+  },
 ];
 
-export default function Tab2() {
+export default function Groups() {
   const router = useRouter();
 
   const navigateToGroupDetail = (groupId: string) => {
     router.push({
-      pathname: "/groups/[id]",
+      pathname: "/modal/groups/[id]",
       params: { id: groupId },
     });
   };
