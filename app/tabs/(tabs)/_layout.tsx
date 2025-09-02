@@ -20,17 +20,19 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="tab1"
+        name="groups"
         options={{
           title: "Groups",
-          tabBarIcon: ({ color }) => <TabBarIcon name="star-o" color={color} />,
+          tabBarIcon: ({ color }) => <TabBarIcon name="group" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="tab2"
+        name="activity"
         options={{
           title: "Activity",
-          tabBarIcon: ({ color }) => <TabBarIcon name="star-o" color={color} />,
+          tabBarIcon: ({ color }) => (
+            <TabBarIcon name="bar-chart-o" color={color} />
+          ),
         }}
       />
     </Tabs>

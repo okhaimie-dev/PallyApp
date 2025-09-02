@@ -10,7 +10,7 @@ export default function Tab2() {
       <Heading className="font-bold text-2xl">Groups</Heading>
       <Divider className="my-[30px] w-[80%]" />
       <Text className="p-4">Example below to use gluestack-ui components.</Text>
-      <EditScreenInfo path="app/(app)/(tabs)/tab1.tsx" />
+      <EditScreenInfo path="app/(app)/(tabs)/groups.tsx" />
     </Center>
   );
 }
