@@ -2,7 +2,7 @@ import { Heading } from "@/components/ui/heading";
 import { Box } from "@/components/ui/box";
 import GroupCard from "@/components/GroupCard";
 import { ScrollView } from "react-native";
-import { useRouter } from "expo-router";
+import { Link } from "expo-router";
 
 interface Group {
   id: string;
@@ -45,10 +45,15 @@ const MOCK_GROUPS: Group[] = [
 ];
 
 export default function Tab2() {
-  const router = useRouter();
-
   const navigateToGroupDetail = (groupId: string) => {
-    router.push(`/groups/${groupId}`);
+    <Link
+      href={{
+        pathname: "/groups/[id]",
+        params: { id: groupId },
+      }}
+    >
+      // Rubbish
+    </Link>;
   };
 
   return (
