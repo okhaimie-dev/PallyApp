@@ -9,13 +9,76 @@ class SignInPage extends StatefulWidget {
   State<SignInPage> createState() => _SignInPageState();
 }
 
-class _SignInPageState extends State<SignInPage> {
+class _SignInPageState extends State<SignInPage> with TickerProviderStateMixin {
   bool _isLoading = false;
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late AnimationController _scaleController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
     _initializeGoogleSignIn();
+    _initializeAnimations();
+  }
+
+  void _initializeAnimations() {
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeInOut,
+    ));
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _slideController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _scaleAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _scaleController,
+      curve: Curves.elasticOut,
+    ));
+
+    // Start animations with delays
+    _fadeController.forward();
+    Future.delayed(const Duration(milliseconds: 300), () {
+      _slideController.forward();
+    });
+    Future.delayed(const Duration(milliseconds: 600), () {
+      _scaleController.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _slideController.dispose();
+    _scaleController.dispose();
+    super.dispose();
   }
 
   Future<void> _initializeGoogleSignIn() async {
@@ -75,116 +138,134 @@ class _SignInPageState extends State<SignInPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-              // App Logo/Icon
-              Container(
-                height: 120,
-                width: 120,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: Image.asset(
-                    'assets/images/plain_pally.png',
-                    width: 120,
-                    height: 120,
-                    fit: BoxFit.cover,
+              // App Logo/Icon with Animation
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: Container(
+                    height: 140,
+                    width: 140,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(25),
+                      child: Image.asset(
+                        'assets/images/plain_pally.png',
+                        width: 140,
+                        height: 140,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   ),
                 ),
               ),
               
-              const SizedBox(height: 40),
+              const SizedBox(height: 50),
               
-              // Welcome Text
-              const Text(
-                'Welcome to Pally',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              
-              const SizedBox(height: 12),
-              
-              const Text(
-                'Sign in to continue',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF9CA3AF), // Gray text
-                ),
-                textAlign: TextAlign.center,
-              ),
-              
-              const SizedBox(height: 60),
-              
-              // Google Sign In Button
-              Container(
-                height: 56,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+              // Subtext with Animation
+              SlideTransition(
+                position: _slideAnimation,
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: const Text(
+                    'Connect, Chat, and Share\nYour Global Community Awaits',
+                    style: TextStyle(
+                      fontSize: 18,
+                      height: 1.4,
+                      color: Color(0xFF9CA3AF),
+                      fontWeight: FontWeight.w400,
                     ),
-                  ],
-                ),
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _signInWithGoogle,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black87,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    textAlign: TextAlign.center,
                   ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.black87),
-                          ),
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            // Google Icon
-                            Container(
-                              width: 24,
-                              height: 24,
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Center(
-                                child: Text(
-                                  'G',
-                                  style: TextStyle(
-                                    color: Color(0xFF4285F4), // Google Blue
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                    fontFamily: 'Roboto',
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            const Text(
-                              'Continue with Google',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+                ),
+              ),
+              
+              const SizedBox(height: 80),
+              
+              // Google Sign In Button with Animation
+              SlideTransition(
+                position: _slideAnimation,
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    height: 58,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.white,
+                          Colors.grey[50]!,
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
                         ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _isLoading ? null : _signInWithGoogle,
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: _isLoading
+                              ? const Center(
+                                  child: SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.black87),
+                                    ),
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    // Google Icon
+                                    Container(
+                                      width: 26,
+                                      height: 26,
+                                      decoration: const BoxDecoration(
+                                        color: Colors.white,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Center(
+                                        child: Text(
+                                          'G',
+                                          style: TextStyle(
+                                            color: Color(0xFF4285F4),
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            fontFamily: 'Roboto',
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    const Text(
+                                      'Continue with Google',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
               

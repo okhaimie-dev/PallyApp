@@ -18,7 +18,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify that the sign in page loads
-    expect(find.text('Welcome to Pally'), findsOneWidget);
+    expect(find.text('Connect, Chat, and Share\nYour Global Community Awaits'), findsOneWidget);
     expect(find.text('Continue with Google'), findsOneWidget);
   });
 }
