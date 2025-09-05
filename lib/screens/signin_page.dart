@@ -244,6 +244,7 @@ class _SignInPageState extends State<SignInPage> with TickerProviderStateMixin {
                                 )
                               : Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     // Google Icon
                                     Container(
@@ -253,19 +254,16 @@ class _SignInPageState extends State<SignInPage> with TickerProviderStateMixin {
                                         color: Colors.white,
                                         shape: BoxShape.circle,
                                       ),
-                                      child: const Center(
-                                        child: Text(
-                                          'G',
-                                          style: TextStyle(
-                                            color: Color(0xFF4285F4),
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                            fontFamily: 'Roboto',
-                                          ),
+                                      child: ClipOval(
+                                        child: Image.asset(
+                                          'assets/images/google.png',
+                                          width: 26,
+                                          height: 26,
+                                          fit: BoxFit.cover,
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(width: 16),
+                                    const SizedBox(width: 8),
                                     const Text(
                                       'Continue with Google',
                                       style: TextStyle(
