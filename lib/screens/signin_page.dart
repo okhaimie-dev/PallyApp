@@ -169,15 +169,29 @@ class _SignInPageState extends State<SignInPage> with TickerProviderStateMixin {
                 position: _slideAnimation,
                 child: FadeTransition(
                   opacity: _fadeAnimation,
-                  child: const Text(
-                    'Connect, Chat, and Share\nYour Global Community Awaits',
-                    style: TextStyle(
-                      fontSize: 18,
-                      height: 1.4,
-                      color: Color(0xFF9CA3AF),
-                      fontWeight: FontWeight.w400,
-                    ),
-                    textAlign: TextAlign.center,
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Connect, Chat, and Share',
+                        style: TextStyle(
+                          fontSize: 18,
+                          height: 1.4,
+                          color: Color(0xFF9CA3AF),
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const Text(
+                        'Your Global Community Awaits',
+                        style: TextStyle(
+                          fontSize: 18,
+                          height: 1.4,
+                          color: Color(0xFFfa7963),
+                          fontWeight: FontWeight.w400,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
                 ),
               ),
