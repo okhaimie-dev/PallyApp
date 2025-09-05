@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/signin_page.dart';
+import 'screens/home_page.dart';
 
 void main() {
   runApp(const PallyApp());
@@ -41,6 +42,10 @@ class PallyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       routes: {
         '/': (context) => const SignInPage(),
+        '/home': (context) {
+          final user = ModalRoute.of(context)!.settings.arguments as dynamic;
+          return HomePage(user: user);
+        },
       },
     );
   }
