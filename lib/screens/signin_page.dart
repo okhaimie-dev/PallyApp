@@ -67,12 +67,14 @@ class _SignInPageState extends State<SignInPage> {
     return Scaffold(
       backgroundColor: const Color(0xFF121212), // Dark background
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
               // App Logo/Icon
               Container(
                 height: 120,
@@ -88,10 +90,14 @@ class _SignInPageState extends State<SignInPage> {
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.person,
-                  size: 60,
-                  color: Color(0xFF6366F1), // Indigo accent
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Image.asset(
+                    'assets/images/plain_pally.png',
+                    width: 120,
+                    height: 120,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
               
@@ -165,10 +171,16 @@ class _SignInPageState extends State<SignInPage> {
                                 color: Colors.white,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
-                                Icons.g_mobiledata,
-                                color: Colors.black,
-                                size: 20,
+                              child: const Center(
+                                child: Text(
+                                  'G',
+                                  style: TextStyle(
+                                    color: Color(0xFF4285F4), // Google Blue
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                    fontFamily: 'Roboto',
+                                  ),
+                                ),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -185,9 +197,15 @@ class _SignInPageState extends State<SignInPage> {
               ),
               
               const SizedBox(height: 40),
-              
-              // Terms and Privacy
-              Text(
+                ],
+              ),
+            ),
+            // Terms and Privacy at the bottom
+            Positioned(
+              bottom: 40,
+              left: 24,
+              right: 24,
+              child: Text(
                 'By continuing, you agree to our Terms of Service and Privacy Policy',
                 style: TextStyle(
                   fontSize: 12,
@@ -195,8 +213,8 @@ class _SignInPageState extends State<SignInPage> {
                 ),
                 textAlign: TextAlign.center,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
