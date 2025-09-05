@@ -128,7 +128,7 @@ class _ChatPageState extends State<ChatPage> {
           
           // Message Input
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             decoration: const BoxDecoration(
               color: Color(0xFF1A1A1A),
               border: Border(

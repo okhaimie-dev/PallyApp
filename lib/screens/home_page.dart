@@ -4,6 +4,9 @@ import 'categories_screen.dart';
 import 'chat_page.dart';
 import 'notifications_screen.dart';
 import 'user_profile_screen.dart';
+import 'deposit_screen.dart';
+import 'withdraw_screen.dart';
+import 'my_tips_page.dart';
 
 class HomePage extends StatefulWidget {
   final GoogleSignInAccount user;
@@ -17,6 +20,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   int _selectedIndex = 0;
   late TabController _tabController;
+  
 
   @override
   void initState() {
@@ -355,7 +359,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         children: [
           // Profile Header
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
               color: const Color(0xFF1A1A1A),
               borderRadius: BorderRadius.circular(20),
@@ -363,20 +367,20 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             child: Column(
               children: [
                 CircleAvatar(
-                  radius: 50,
+                  radius: 60,
                   backgroundImage: widget.user.photoUrl != null
                       ? NetworkImage(widget.user.photoUrl!)
                       : null,
                   child: widget.user.photoUrl == null
-                      ? const Icon(Icons.person, size: 50, color: Colors.white70)
+                      ? const Icon(Icons.person, size: 60, color: Colors.white70)
                       : null,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 Text(
                   widget.user.displayName ?? 'User',
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 24,
+                    fontSize: 28,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -388,9 +392,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     fontSize: 16,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
                     color: const Color(0xFF6366F1).withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20),
@@ -405,18 +409,41 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
-                ElevatedButton.icon(
-                  onPressed: () => _navigateToUserProfile(context),
-                  icon: const Icon(Icons.edit, size: 18),
-                  label: const Text('Edit Profile'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6366F1),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _navigateToUserProfile(context),
+                        icon: const Icon(Icons.edit, size: 18),
+                        label: const Text('Edit Profile'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF6366F1),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _navigateToMyTips(context),
+                        icon: const Icon(Icons.attach_money, size: 18),
+                        label: const Text('My Tips'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFF59E0B),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -535,7 +562,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -584,7 +611,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+            Text(
                   title,
                   style: const TextStyle(
                     color: Colors.white,
@@ -662,6 +689,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   void _showCreateGroupDialog(BuildContext context) {
+    final TextEditingController nameController = TextEditingController();
+    final TextEditingController descriptionController = TextEditingController();
+    String selectedCategory = 'General';
+
+    final List<Map<String, dynamic>> categories = [
+      {'name': 'General', 'icon': Icons.group, 'color': const Color(0xFF6366F1)},
+      {'name': 'Technology', 'icon': Icons.computer, 'color': const Color(0xFF10B981)},
+      {'name': 'Gaming', 'icon': Icons.sports_esports, 'color': const Color(0xFFF59E0B)},
+      {'name': 'Music', 'icon': Icons.music_note, 'color': const Color(0xFFEF4444)},
+      {'name': 'Sports', 'icon': Icons.sports_soccer, 'color': const Color(0xFF8B5CF6)},
+      {'name': 'Art', 'icon': Icons.palette, 'color': const Color(0xFFEC4899)},
+      {'name': 'Business', 'icon': Icons.business, 'color': const Color(0xFF06B6D4)},
+      {'name': 'Education', 'icon': Icons.school, 'color': const Color(0xFF84CC16)},
+    ];
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -670,39 +712,79 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           'Create Private Group',
           style: TextStyle(color: Colors.white),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Group Name',
-                labelStyle: TextStyle(color: Colors.grey[400]),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFF6366F1)),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Description',
-                labelStyle: TextStyle(color: Colors.grey[400]),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFF6366F1)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Group Name',
+                  labelStyle: TextStyle(color: Colors.grey[400]),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF6366F1)),
+                  ),
                 ),
               ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: descriptionController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Description',
+                  labelStyle: TextStyle(color: Colors.grey[400]),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF6366F1)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: selectedCategory,
+                dropdownColor: const Color(0xFF2A2A2A),
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Category',
+                  labelStyle: TextStyle(color: Colors.grey[400]),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF6366F1)),
+                  ),
+                ),
+                items: categories.map((category) {
+                  return DropdownMenuItem(
+                    value: category['name'],
+                    child: Row(
+                      children: [
+                        Icon(
+                          category['icon'],
+                          color: category['color'],
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(category['name']),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  selectedCategory = value!;
+                },
             ),
           ],
+        ),
         ),
         actions: [
           TextButton(
@@ -710,7 +792,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             child: Text('Cancel', style: TextStyle(color: Colors.grey[400])),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              if (nameController.text.isNotEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Created "${nameController.text}" group in $selectedCategory category'),
+                    backgroundColor: const Color(0xFF10B981),
+                  ),
+                );
+                Navigator.pop(context);
+              }
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF6366F1),
               foregroundColor: Colors.white,
@@ -718,6 +810,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             child: const Text('Create'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _navigateToMyTips(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const MyTipsPage(),
       ),
     );
   }
