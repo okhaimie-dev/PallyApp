@@ -169,15 +169,16 @@ class _MyTipsPageState extends State<MyTipsPage> {
                         size: 28,
                       ),
                       const SizedBox(width: 12),
-                      const Text(
-                        'Total Tips Received',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: const Text(
+                          'Total Tips Received',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                      const Spacer(),
                       Text(
                         '\$${_totalTipsReceived.toStringAsFixed(2)}',
                         style: const TextStyle(

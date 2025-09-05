@@ -763,18 +763,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     borderSide: const BorderSide(color: Color(0xFF6366F1)),
                   ),
                 ),
-                items: categories.map((category) {
-                  return DropdownMenuItem(
-                    value: category['name'],
+                items: categories.map<DropdownMenuItem<String>>((category) {
+                  return DropdownMenuItem<String>(
+                    value: category['name'] as String,
                     child: Row(
                       children: [
                         Icon(
-                          category['icon'],
-                          color: category['color'],
+                          category['icon'] as IconData,
+                          color: category['color'] as Color,
                           size: 20,
                         ),
                         const SizedBox(width: 12),
-                        Text(category['name']),
+                        Text(category['name'] as String),
                       ],
                     ),
                   );
