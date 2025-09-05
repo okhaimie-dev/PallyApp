@@ -54,22 +54,19 @@ class CategoriesScreen extends StatelessWidget {
           children: [
             // Search Bar
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: const Color(0xFF1A1A1A),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Row(
-                children: [
-                  Icon(Icons.search, color: Colors.grey[400]),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Search $categoryName groups...',
-                      style: TextStyle(color: Colors.grey[400]),
-                    ),
-                  ),
-                ],
+              child: TextField(
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Search $categoryName groups...',
+                  hintStyle: TextStyle(color: Colors.grey[400]),
+                  prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
               ),
             ),
             
