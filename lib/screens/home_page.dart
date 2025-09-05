@@ -7,6 +7,7 @@ import 'user_profile_screen.dart';
 import 'deposit_screen.dart';
 import 'withdraw_screen.dart';
 import 'my_tips_page.dart';
+import 'edit_profile_screen.dart';
 
 class HomePage extends StatefulWidget {
   final GoogleSignInAccount user;
@@ -678,11 +679,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => UserProfileScreen(
+        builder: (context) => EditProfileScreen(
           userName: widget.user.displayName ?? 'User',
           userEmail: widget.user.email,
           userPhotoUrl: widget.user.photoUrl,
-          isCurrentUser: true,
         ),
       ),
     );

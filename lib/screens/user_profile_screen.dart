@@ -201,37 +201,22 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            // Withdraw Tips Button
+          ] else ...[
+            // Tip Button for Other Users
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () => _showWithdrawTipsDialog(context),
-                icon: const Icon(Icons.account_balance_wallet, size: 18),
-                label: const Text('Withdraw Tips'),
+                onPressed: () => _showTipDialog(context),
+                icon: const Icon(Icons.attach_money, size: 18),
+                label: const Text('Send Tip'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6366F1),
+                  backgroundColor: const Color(0xFF10B981),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
-              ),
-            ),
-          ] else ...[
-            // Tip Button for Other Users
-            ElevatedButton.icon(
-              onPressed: () => _showTipDialog(context),
-              icon: const Icon(Icons.attach_money, size: 18),
-              label: const Text('Send Tip'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF10B981),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
             ),
           ],
