@@ -80,15 +80,7 @@ class _SignInPageState extends State<SignInPage> {
                 height: 120,
                 width: 120,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E1E1E),
                   borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(20),
