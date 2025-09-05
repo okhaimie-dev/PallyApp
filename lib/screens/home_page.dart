@@ -149,6 +149,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           color: const Color(0xFF6366F1),
           borderRadius: BorderRadius.circular(12),
         ),
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Colors.transparent,
         labelColor: Colors.white,
         unselectedLabelColor: Colors.grey[400],
         labelStyle: const TextStyle(fontWeight: FontWeight.w600),
@@ -382,6 +384,23 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     fontSize: 16,
                   ),
                 ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6366F1).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.3)),
+                  ),
+                  child: Text(
+                    'ID: ${widget.user.id}',
+                    style: TextStyle(
+                      color: Colors.grey[300],
+                      fontSize: 12,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 20),
                 ElevatedButton.icon(
                   onPressed: () {},
@@ -440,7 +459,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Widget _buildCategoryCard(String title, IconData icon, Color color) {
     return Container(
-      width: 100,
+      width: 120,
       margin: const EdgeInsets.only(right: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -448,9 +467,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
           Icon(icon, color: color, size: 32),
           const SizedBox(height: 8),
           Text(
@@ -461,6 +480,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               fontWeight: FontWeight.w600,
             ),
             textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
