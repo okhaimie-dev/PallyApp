@@ -4,9 +4,6 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'categories_screen.dart';
 import 'chat_page.dart';
 import 'notifications_screen.dart';
-import 'user_profile_screen.dart';
-import 'deposit_screen.dart';
-import 'withdraw_screen.dart';
 import 'my_tips_page.dart';
 import 'edit_profile_screen.dart';
 
@@ -622,7 +619,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Export Recovery Phrase',
+                    'Export Private Key',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -630,7 +627,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     ),
                   ),
                   Text(
-                    'Backup your wallet recovery phrase',
+                    'Backup your wallet private key',
                     style: TextStyle(
                       color: Colors.grey[400],
                       fontSize: 14,
@@ -890,7 +887,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     // Show toast message
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Recovery phrase copied to clipboard'),
+        content: const Text('Private key copied to clipboard'),
         backgroundColor: const Color(0xFF10B981),
         duration: const Duration(seconds: 2),
       ),
