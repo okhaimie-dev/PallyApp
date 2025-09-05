@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'categories_screen.dart';
 import 'chat_page.dart';
+import 'notifications_screen.dart';
+import 'user_profile_screen.dart';
 
 class HomePage extends StatefulWidget {
   final GoogleSignInAccount user;
@@ -120,16 +122,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ),
           
           // Notifications
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1A1A),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.notifications_outlined,
-              color: Colors.white70,
-              size: 24,
+          GestureDetector(
+            onTap: () => _navigateToNotifications(context),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A1A),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.notifications_outlined,
+                color: Colors.white70,
+                size: 24,
+              ),
             ),
           ),
         ],
@@ -402,7 +407,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed: () => _navigateToUserProfile(context),
                   icon: const Icon(Icons.edit, size: 18),
                   label: const Text('Edit Profile'),
                   style: ElevatedButton.styleFrom(
@@ -628,6 +633,29 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           groupName: groupName,
           groupIcon: groupIcon,
           groupColor: groupColor,
+        ),
+      ),
+    );
+  }
+
+  void _navigateToNotifications(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const NotificationsScreen(),
+      ),
+    );
+  }
+
+  void _navigateToUserProfile(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => UserProfileScreen(
+          userName: widget.user.displayName ?? 'User',
+          userEmail: widget.user.email,
+          userPhotoUrl: widget.user.photoUrl,
+          isCurrentUser: true,
         ),
       ),
     );

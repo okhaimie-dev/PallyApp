@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'user_profile_screen.dart';
 
 class ChatPage extends StatefulWidget {
   final String groupName;
@@ -189,15 +190,18 @@ class _ChatPageState extends State<ChatPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!message.isMe) ...[
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: widget.groupColor.withOpacity(0.3),
-              child: Text(
-                message.senderName[0].toUpperCase(),
-                style: TextStyle(
-                  color: widget.groupColor,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+            GestureDetector(
+              onTap: () => _navigateToUserProfile(message.senderName),
+              child: CircleAvatar(
+                radius: 16,
+                backgroundColor: widget.groupColor.withOpacity(0.3),
+                child: Text(
+                  message.senderName[0].toUpperCase(),
+                  style: TextStyle(
+                    color: widget.groupColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -248,15 +252,18 @@ class _ChatPageState extends State<ChatPage> {
           ),
           if (message.isMe) ...[
             const SizedBox(width: 8),
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: widget.groupColor.withOpacity(0.3),
-              child: const Text(
-                "Y",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+            GestureDetector(
+              onTap: () => _navigateToUserProfile("You"),
+              child: CircleAvatar(
+                radius: 16,
+                backgroundColor: widget.groupColor.withOpacity(0.3),
+                child: const Text(
+                  "Y",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -295,6 +302,20 @@ class _ChatPageState extends State<ChatPage> {
       });
       _messageController.clear();
     }
+  }
+
+  void _navigateToUserProfile(String userName) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => UserProfileScreen(
+          userName: userName,
+          userEmail: userName == "You" ? "you@example.com" : "${userName.toLowerCase().replaceAll(' ', '.')}@example.com",
+          userPhotoUrl: null,
+          isCurrentUser: userName == "You",
+        ),
+      ),
+    );
   }
 
   void _showGroupOptions(BuildContext context) {
