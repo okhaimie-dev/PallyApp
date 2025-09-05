@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'deposit_screen.dart';
+import 'withdraw_screen.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final String userName;
@@ -161,8 +163,64 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           
           const SizedBox(height: 20),
           
-          // Tip Button (only for other users)
-          if (!widget.isCurrentUser)
+          // Action Buttons
+          if (widget.isCurrentUser) ...[
+            // Wallet Actions for Current User
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _navigateToDeposit(context),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Deposit'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _navigateToWithdraw(context),
+                    icon: const Icon(Icons.remove, size: 18),
+                    label: const Text('Withdraw'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFEF4444),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Withdraw Tips Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _showWithdrawTipsDialog(context),
+                icon: const Icon(Icons.account_balance_wallet, size: 18),
+                label: const Text('Withdraw Tips'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6366F1),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+            ),
+          ] else ...[
+            // Tip Button for Other Users
             ElevatedButton.icon(
               onPressed: () => _showTipDialog(context),
               icon: const Icon(Icons.attach_money, size: 18),
@@ -176,6 +234,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
             ),
+          ],
         ],
       ),
     );
@@ -533,6 +592,134 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Tip of \$${amount.toStringAsFixed(2)} sent to ${widget.userName}!'),
+        backgroundColor: const Color(0xFF10B981),
+      ),
+    );
+  }
+
+  void _navigateToDeposit(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const DepositScreen(),
+      ),
+    );
+  }
+
+  void _navigateToWithdraw(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const WithdrawScreen(),
+      ),
+    );
+  }
+
+  void _showWithdrawTipsDialog(BuildContext context) {
+    final TextEditingController amountController = TextEditingController();
+    String selectedCurrency = 'USDC';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text(
+          'Withdraw Tips',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Available Balance: \$${_totalTipsReceived.toStringAsFixed(2)}',
+              style: TextStyle(
+                color: Colors.grey[300],
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: amountController,
+              style: const TextStyle(color: Colors.white),
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Amount (\$)',
+                labelStyle: TextStyle(color: Colors.grey[400]),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFF6366F1)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: selectedCurrency,
+              dropdownColor: const Color(0xFF2A2A2A),
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Currency',
+                labelStyle: TextStyle(color: Colors.grey[400]),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFF6366F1)),
+                ),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'USDC', child: Text('USDC')),
+                DropdownMenuItem(value: 'STRK', child: Text('STRK')),
+              ],
+              onChanged: (value) {
+                selectedCurrency = value!;
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey[400])),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final amount = double.tryParse(amountController.text);
+              if (amount != null && amount > 0 && amount <= _totalTipsReceived) {
+                _withdrawTips(amount, selectedCurrency);
+                Navigator.pop(context);
+              } else if (amount != null && amount > _totalTipsReceived) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Insufficient balance'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6366F1),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Withdraw'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _withdrawTips(double amount, String currency) {
+    setState(() {
+      _totalTipsReceived -= amount;
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Withdrew \$${amount.toStringAsFixed(2)} in $currency successfully!'),
         backgroundColor: const Color(0xFF10B981),
       ),
     );
