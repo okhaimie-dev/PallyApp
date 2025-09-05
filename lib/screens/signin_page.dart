@@ -2,35 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'home_page.dart';
 
-// Mock class for testing purposes
-class MockGoogleSignInAccount implements GoogleSignInAccount {
-  @override
-  String get id => 'test_user_id';
-  
-  @override
-  String get email => 'test@example.com';
-  
-  @override
-  String? get displayName => 'Test User';
-  
-  @override
-  String? get photoUrl => null;
-  
-  @override
-  String? get serverAuthCode => null;
-  
-  @override
-  GoogleSignInAuthentication get authentication => throw UnimplementedError();
-  
-  @override
-  GoogleSignInAuthorizationClient get authorizationClient => throw UnimplementedError();
-  
-  @override
-  Future<Map<String, String>> get authHeaders => throw UnimplementedError();
-  
-  @override
-  Future<void> clearAuthCache() => throw UnimplementedError();
-}
 
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key});
@@ -113,7 +84,7 @@ class _SignInPageState extends State<SignInPage> with TickerProviderStateMixin {
 
   Future<void> _initializeGoogleSignIn() async {
     try {
-      // Google Sign-In initialization will be handled by the plugin
+      // Google Sign-In initialization is handled automatically by the plugin
       debugPrint('Google Sign-In ready');
     } catch (e) {
       // Handle initialization errors gracefully (e.g., in test environment)
@@ -127,20 +98,29 @@ class _SignInPageState extends State<SignInPage> with TickerProviderStateMixin {
     });
 
     try {
-      // For now, simulate a successful sign-in for testing
-      // TODO: Implement proper Google Sign-In authentication
-      final googleUser = MockGoogleSignInAccount();
+      // Sign in with Google using the instance
+      final GoogleSignInAccount? googleUser = await GoogleSignIn.instance.authenticate();
       
-      // Successfully signed in
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => HomePage(user: googleUser),
-          ),
-        );
+      if (googleUser != null) {
+        // Successfully signed in
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => HomePage(user: googleUser),
+            ),
+          );
+        }
+      } else {
+        // User cancelled the sign-in
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     } catch (error) {
+      debugPrint('Sign in failed: $error');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

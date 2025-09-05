@@ -438,11 +438,20 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               border: Border.all(color: Colors.red.withOpacity(0.3)),
             ),
             child: TextButton.icon(
-                          onPressed: () async {
-                // For now, just navigate back to sign in page
-                // TODO: Implement proper Google Sign-In logout
-                if (context.mounted) {
-                  Navigator.pushReplacementNamed(context, '/');
+            onPressed: () async {
+                try {
+                  // Sign out from Google
+              await GoogleSignIn.instance.signOut();
+                  
+                  if (context.mounted) {
+                    Navigator.pushReplacementNamed(context, '/');
+                  }
+                } catch (error) {
+                  debugPrint('Sign out failed: $error');
+                  // Still navigate back even if sign out fails
+              if (context.mounted) {
+                Navigator.pushReplacementNamed(context, '/');
+                  }
                 }
               },
               icon: const Icon(Icons.logout, color: Colors.red),
@@ -467,9 +476,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
           Icon(icon, color: color, size: 32),
           const SizedBox(height: 8),
           Text(
