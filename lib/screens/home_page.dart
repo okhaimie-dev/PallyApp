@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'categories_screen.dart';
 import 'chat_page.dart';
@@ -21,6 +22,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   int _selectedIndex = 0;
   late TabController _tabController;
+  bool _isPrivateKeyCopied = false;
   
 
   @override
@@ -453,6 +455,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           const SizedBox(height: 24),
           
           // Settings Options
+          _buildExportPrivateKeyOption(),
           _buildSettingsOption(Icons.notifications, 'Notifications', 'Manage your notifications'),
           _buildSettingsOption(Icons.privacy_tip, 'Privacy', 'Control your privacy settings'),
           _buildSettingsOption(Icons.help, 'Help & Support', 'Get help and support'),
@@ -589,6 +592,57 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               Icons.arrow_forward_ios,
               color: Colors.grey[400],
               size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExportPrivateKeyOption() {
+    return GestureDetector(
+      onTap: _copyPrivateKey,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.vpn_key,
+              color: Colors.white70,
+              size: 24,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Export Recovery Phrase',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    'Backup your wallet recovery phrase',
+                    style: TextStyle(
+                      color: Colors.grey[400],
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              _isPrivateKeyCopied ? Icons.check : Icons.copy,
+              color: _isPrivateKeyCopied ? const Color(0xFF10B981) : Colors.grey[400],
+              size: 20,
             ),
           ],
         ),
@@ -821,5 +875,34 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         builder: (context) => const MyTipsPage(),
       ),
     );
+  }
+
+  void _copyPrivateKey() async {
+    // Mock private key - in a real app, this would be the actual private key
+    const String mockPrivateKey = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    
+    await Clipboard.setData(ClipboardData(text: mockPrivateKey));
+    
+    setState(() {
+      _isPrivateKeyCopied = true;
+    });
+    
+    // Show toast message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Recovery phrase copied to clipboard'),
+        backgroundColor: const Color(0xFF10B981),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+    
+    // Reset the icon after 3 seconds
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _isPrivateKeyCopied = false;
+        });
+      }
+    });
   }
 }
