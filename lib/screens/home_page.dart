@@ -15,7 +15,7 @@ class HomePage extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
-              await GoogleSignIn().signOut();
+              await GoogleSignIn.instance.signOut();
               if (context.mounted) {
                 Navigator.pushReplacementNamed(context, '/');
               }

@@ -10,11 +10,22 @@ class SignInPage extends StatefulWidget {
 }
 
 class _SignInPageState extends State<SignInPage> {
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['email', 'profile'],
-  );
-  
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeGoogleSignIn();
+  }
+
+  Future<void> _initializeGoogleSignIn() async {
+    try {
+      await GoogleSignIn.instance.initialize();
+    } catch (e) {
+      // Handle initialization errors gracefully (e.g., in test environment)
+      debugPrint('Google Sign-In initialization failed: $e');
+    }
+  }
 
   Future<void> _signInWithGoogle() async {
     setState(() {
@@ -22,18 +33,16 @@ class _SignInPageState extends State<SignInPage> {
     });
 
     try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      final GoogleSignInAccount googleUser = await GoogleSignIn.instance.authenticate();
       
-      if (googleUser != null) {
-        // Successfully signed in
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => HomePage(user: googleUser),
-            ),
-          );
-        }
+      // Successfully signed in
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => HomePage(user: googleUser),
+          ),
+        );
       }
     } catch (error) {
       if (mounted) {
@@ -73,7 +82,7 @@ class _SignInPageState extends State<SignInPage> {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
+                      color: Colors.black.withValues(alpha: 0.3),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
@@ -119,7 +128,7 @@ class _SignInPageState extends State<SignInPage> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -153,12 +162,13 @@ class _SignInPageState extends State<SignInPage> {
                               width: 24,
                               height: 24,
                               decoration: const BoxDecoration(
-                                image: DecorationImage(
-                                  image: NetworkImage(
-                                    'https://developers.google.com/identity/images/g-logo.png',
-                                  ),
-                                  fit: BoxFit.contain,
-                                ),
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.g_mobiledata,
+                                color: Colors.black,
+                                size: 20,
                               ),
                             ),
                             const SizedBox(width: 12),

@@ -18,11 +18,9 @@ class PallyApp extends StatelessWidget {
           primary: Color(0xFF6366F1), // Indigo accent
           secondary: Color(0xFF8B5CF6), // Purple accent
           surface: Color(0xFF1E1E1E),
-          background: Color(0xFF121212),
           onPrimary: Colors.white,
           onSecondary: Colors.white,
           onSurface: Colors.white,
-          onBackground: Colors.white,
         ),
         scaffoldBackgroundColor: const Color(0xFF121212),
         appBarTheme: const AppBarTheme(
@@ -40,7 +38,6 @@ class PallyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const SignInPage(),
       debugShowCheckedModeBanner: false,
       routes: {
         '/': (context) => const SignInPage(),

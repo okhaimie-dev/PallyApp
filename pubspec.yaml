@@ -36,7 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   
   # Google Sign-In
-  google_sign_in: ^6.2.1
+  google_sign_in: ^7.1.1
   
   # HTTP requests
   http: ^1.2.0
