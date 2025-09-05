@@ -207,7 +207,8 @@ class _ChatPageState extends State<ChatPage> {
             ),
             const SizedBox(width: 8),
           ],
-          Flexible(
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 280),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
@@ -250,24 +251,6 @@ class _ChatPageState extends State<ChatPage> {
               ),
             ),
           ),
-          if (message.isMe) ...[
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: () => _navigateToUserProfile("You"),
-              child: CircleAvatar(
-                radius: 16,
-                backgroundColor: widget.groupColor.withOpacity(0.3),
-                child: const Text(
-                  "Y",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );

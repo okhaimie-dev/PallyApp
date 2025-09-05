@@ -116,23 +116,10 @@ class _DepositScreenState extends State<DepositScreen> {
                     value: currency,
                     child: Row(
                       children: [
-                        Container(
+                        Image.asset(
+                          'assets/images/${currency.toLowerCase()}.png',
                           width: 24,
                           height: 24,
-                          decoration: BoxDecoration(
-                            color: _getCurrencyColor(currency).withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Center(
-                            child: Text(
-                              currency[0],
-                              style: TextStyle(
-                                color: _getCurrencyColor(currency),
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
                         ),
                         const SizedBox(width: 12),
                         Text(currency),

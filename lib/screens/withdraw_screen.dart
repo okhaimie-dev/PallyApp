@@ -67,7 +67,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'Available Balance',
+                    'Total Available Balance',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -75,7 +75,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    '\$1,247.50',
+                    '\$2,498.25',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 28,
@@ -118,23 +118,10 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                     value: currency,
                     child: Row(
                       children: [
-                        Container(
+                        Image.asset(
+                          'assets/images/${currency.toLowerCase()}.png',
                           width: 24,
                           height: 24,
-                          decoration: BoxDecoration(
-                            color: _getCurrencyColor(currency).withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Center(
-                            child: Text(
-                              currency[0],
-                              style: TextStyle(
-                                color: _getCurrencyColor(currency),
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
                         ),
                         const SizedBox(width: 12),
                         Text(currency),
@@ -457,7 +444,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
       return;
     }
     
-    if (amount > 1247.50) {
+    if (amount > 2498.25) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Insufficient balance'),
