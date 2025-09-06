@@ -61,6 +61,24 @@ post_install do |installer|
       
       # Fix for all pods header issues
       config.build_settings['CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER'] = 'NO'
+      
+      # Additional fixes for build script issues
+      config.build_settings['DEVELOPMENT_TEAM'] = 'P9VG7P7TQ5'
+      config.build_settings['CODE_SIGN_STYLE'] = 'Automatic'
+      config.build_settings['CODE_SIGN_IDENTITY'] = 'iPhone Developer'
+      
+      # Fix for script phase issues
+      config.build_settings['SKIP_INSTALL'] = 'YES'
+      config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
+    end
+  end
+  
+  # Fix for script phase issues
+  installer.pods_project.targets.each do |target|
+    target.build_phases.each do |phase|
+      if phase.is_a?(Xcodeproj::Project::Object::PBXShellScriptBuildPhase)
+        phase.shell_script = phase.shell_script.gsub(/set -e/, 'set -e\nset -o pipefail')
+      end
     end
   end
 end
