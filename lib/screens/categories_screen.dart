@@ -2,17 +2,49 @@ import 'package:flutter/material.dart';
 import 'chat_page.dart';
 import '../services/group_service.dart';
 
-class CategoriesScreen extends StatelessWidget {
+class CategoriesScreen extends StatefulWidget {
   final String categoryName;
   final IconData categoryIcon;
   final Color categoryColor;
+  final String userEmail;
 
   const CategoriesScreen({
     super.key,
     required this.categoryName,
     required this.categoryIcon,
     required this.categoryColor,
+    required this.userEmail,
   });
+
+  @override
+  State<CategoriesScreen> createState() => _CategoriesScreenState();
+}
+
+class _CategoriesScreenState extends State<CategoriesScreen> {
+  List<Group> _groups = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadGroups();
+  }
+
+  Future<void> _loadGroups() async {
+    try {
+      // Load public groups for this category
+      final groups = await GroupService.getPublicGroupsByCategory(widget.categoryName);
+      setState(() {
+        _groups = groups;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading groups: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,14 +63,14 @@ class CategoriesScreen extends StatelessWidget {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: categoryColor.withOpacity(0.2),
+                color: widget.categoryColor.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(categoryIcon, color: categoryColor, size: 20),
+              child: Icon(widget.categoryIcon, color: widget.categoryColor, size: 20),
             ),
             const SizedBox(width: 12),
             Text(
-              categoryName,
+              widget.categoryName,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 20,
@@ -48,84 +80,88 @@ class CategoriesScreen extends StatelessWidget {
           ],
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Search Bar
-            Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A1A1A),
-                borderRadius: BorderRadius.circular(12),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Search Bar
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A1A1A),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: TextField(
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'Search ${widget.categoryName} groups...',
+                        hintStyle: TextStyle(color: Colors.grey[400]),
+                        prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Groups in Category
+                  Text(
+                    '${widget.categoryName} Groups',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Real groups from database
+                  if (_groups.isEmpty)
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(40),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.group_off,
+                              size: 64,
+                              color: Colors.grey[600],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No groups found in ${widget.categoryName}',
+                              style: TextStyle(
+                                color: Colors.grey[400],
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    ..._groups.map((group) => _buildGroupCard(
+                      group.name,
+                      group.description.isNotEmpty ? group.description : 'Join the community',
+                      '1 member', // TODO: Get actual member count
+                      _getIconFromString(group.icon),
+                      _getColorFromString(group.color),
+                      context,
+                      group: group,
+                    )),
+                ],
               ),
-              child: TextField(
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'Search $categoryName groups...',
-                  hintStyle: TextStyle(color: Colors.grey[400]),
-                  prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-              ),
             ),
-            
-            const SizedBox(height: 24),
-            
-            // Popular Groups in Category
-            Text(
-              'Popular $categoryName Groups',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            
-            const SizedBox(height: 16),
-            
-            _buildGroupCard(
-              '${categoryName} Enthusiasts',
-              'Join the community of $categoryName lovers',
-              '2.1k members',
-              categoryIcon,
-              categoryColor,
-              context,
-            ),
-            _buildGroupCard(
-              '${categoryName} Professionals',
-              'Network with $categoryName experts',
-              '1.8k members',
-              categoryIcon,
-              categoryColor,
-              context,
-            ),
-            _buildGroupCard(
-              '${categoryName} Beginners',
-              'Learn $categoryName from scratch',
-              '3.2k members',
-              categoryIcon,
-              categoryColor,
-              context,
-            ),
-            _buildGroupCard(
-              '${categoryName} News & Updates',
-              'Stay updated with latest $categoryName news',
-              '1.5k members',
-              categoryIcon,
-              categoryColor,
-              context,
-            ),
-          ],
-        ),
-      ),
     );
   }
 
-  Widget _buildGroupCard(String title, String description, String members, IconData icon, Color color, BuildContext context) {
+  Widget _buildGroupCard(String title, String description, String members, IconData icon, Color color, BuildContext context, {Group? group}) {
     return GestureDetector(
-      onTap: () => _navigateToChat(context, title),
+      onTap: () => group != null ? _navigateToGroupChat(context, group) : null,
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(20),
@@ -187,29 +223,44 @@ class CategoriesScreen extends StatelessWidget {
     );
   }
 
-  void _navigateToChat(BuildContext context, String groupName) {
-    // Create a mock group for existing hardcoded groups
-    final mockGroup = Group(
-      id: 0,
-      name: groupName,
-      description: 'Mock group for existing functionality',
-      category: categoryName,
-      icon: 'group',
-      color: '#6366F1',
-      isPrivate: false,
-      createdBy: 'system@example.com',
-      createdAt: DateTime.now().toIso8601String(),
-      updatedAt: DateTime.now().toIso8601String(),
-    );
-
+  void _navigateToGroupChat(BuildContext context, Group group) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ChatPage(
-          group: mockGroup,
-          userEmail: 'user@example.com', // This should be passed from the parent widget
+          group: group,
+          userEmail: widget.userEmail,
         ),
       ),
     );
+  }
+
+  IconData _getIconFromString(String iconString) {
+    switch (iconString) {
+      case 'computer':
+        return Icons.computer;
+      case 'sports_esports':
+        return Icons.sports_esports;
+      case 'music_note':
+        return Icons.music_note;
+      case 'palette':
+        return Icons.palette;
+      case 'sports_soccer':
+        return Icons.sports_soccer;
+      case 'business':
+        return Icons.business;
+      case 'school':
+        return Icons.school;
+      default:
+        return Icons.group;
+    }
+  }
+
+  Color _getColorFromString(String colorString) {
+    try {
+      return Color(int.parse(colorString.replaceFirst('#', '0xFF')));
+    } catch (e) {
+      return const Color(0xFF6366F1);
+    }
   }
 }

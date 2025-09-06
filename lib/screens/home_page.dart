@@ -969,6 +969,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           categoryName: categoryName,
           categoryIcon: categoryIcon,
           categoryColor: categoryColor,
+          userEmail: widget.user.email,
         ),
       ),
     );
