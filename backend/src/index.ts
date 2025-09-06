@@ -4,6 +4,7 @@ import cors from "cors";
 import * as crypto from "crypto";
 import { OTPService } from "./services/otpService";
 import { WalletKeyService } from "./services/walletKeyService";
+import { WalletManagementService } from "./services/walletManagementService";
 import emailService from "./services/emailService";
 import {
   generalLimiter,
@@ -103,7 +104,7 @@ app.post("/generate-otp", async (req, res) => {
   }
 });
 
-// Single wallet endpoint - auto-generates everything
+// Wallet endpoint - get or create wallet with database storage
 app.post("/wallet", async (req, res) => {
   try {
     const { email, openId, otp } = req.body;
@@ -132,56 +133,75 @@ app.post("/wallet", async (req, res) => {
       return;
     }
 
-    // Generate deterministic wallet data using simplified approach
-    const SERVER_SECRET = process.env.SERVER_SECRET || "YOUR_SUPER_SECRET_SERVER_KEY_HERE_DO_NOT_HARDCODE_IN_PROD";
-    
-    // Create salt from OpenID + server secret
-    const saltMaterial = `${openId}-${SERVER_SECRET}`;
-    const salt = crypto.createHash('sha256').update(saltMaterial).digest('hex');
-    
-    // Create key material
-    const keyMaterial = `${openId}-${SERVER_SECRET}`;
-    
-    // Simulate Argon2 with multiple rounds of hashing
-    let hash = crypto.createHash('sha256').update(keyMaterial + salt).digest('hex');
-    for (let i = 0; i < 1000; i++) {
-      hash = crypto.createHash('sha256').update(hash + salt).digest('hex');
-    }
-    
-    // Extract private key (first 64 chars)
-    let privateKey = `0x${hash.substring(0, 64)}`;
-    
-    // Ensure private key is within Starknet curve order
-    const keyBigInt = BigInt(privateKey);
-    const maxKey = BigInt("0x800000000000011000000000000000000000000000000000000000000000000");
-    
-    if (keyBigInt >= maxKey) {
-      const reducedKey = keyBigInt % maxKey;
-      privateKey = "0x" + reducedKey.toString(16).padStart(64, '0');
-    }
-    
-    if (BigInt(privateKey) === 0n) {
-      privateKey = "0x" + "1".padStart(64, '0');
-    }
-    
-    // Generate public key (simplified)
-    const publicKey = `0x${hash.substring(64, 128)}`;
-    
-    // Generate account address (simplified)
-    const accountAddress = `0x${hash.substring(0, 40)}`;
+    // Get or create wallet using the management service
+    const walletService = WalletManagementService.getInstance();
+    const walletResult = await walletService.getOrCreateWallet(email, openId);
 
-    console.log(`✅ Wallet created for user: ${email}`);
+    if (!walletResult.success) {
+      res.status(500).json({ error: walletResult.message });
+      return;
+    }
+
+    console.log(`✅ Wallet ${walletResult.isNewWallet ? 'created' : 'retrieved'} for user: ${email}`);
 
     res.json({
       success: true,
-      message: "Wallet created successfully",
-      privateKey: privateKey,
-      publicKey: publicKey,
-      accountAddress: accountAddress,
+      message: walletResult.message,
+      privateKey: walletResult.privateKey,
+      publicKey: walletResult.publicKey,
+      accountAddress: walletResult.walletAddress,
+      isNewWallet: walletResult.isNewWallet
     });
 
   } catch (err: any) {
-    console.error("❌ Error creating wallet:", err);
+    console.error("❌ Error with wallet operation:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get wallet info endpoint (without private key)
+app.get("/wallet/:email", async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    if (!email) {
+      res.status(400).json({ error: "Email is required" });
+      return;
+    }
+
+    const walletService = WalletManagementService.getInstance();
+    const walletInfo = walletService.getWalletInfo(email);
+
+    if (!walletInfo) {
+      res.status(404).json({ error: "Wallet not found" });
+      return;
+    }
+
+    res.json({
+      success: true,
+      walletAddress: walletInfo.walletAddress,
+      publicKey: walletInfo.publicKey
+    });
+
+  } catch (err: any) {
+    console.error("❌ Error retrieving wallet info:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin endpoint to get wallet statistics
+app.get("/admin/wallet-stats", async (req, res) => {
+  try {
+    const walletService = WalletManagementService.getInstance();
+    const stats = walletService.getWalletStats();
+
+    res.json({
+      success: true,
+      stats
+    });
+
+  } catch (err: any) {
+    console.error("❌ Error retrieving wallet stats:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -199,4 +219,6 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('  GET  /test-email - Test email connectivity');
   console.log('  POST /generate-otp - Generate OTP');
   console.log('  POST /wallet - Create/get wallet with OTP');
+  console.log('  GET  /wallet/:email - Get wallet info (without private key)');
+  console.log('  GET  /admin/wallet-stats - Get wallet statistics');
 });

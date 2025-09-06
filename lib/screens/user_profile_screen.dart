@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'deposit_screen.dart';
 import 'withdraw_screen.dart';
+import '../services/wallet_service.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final String userName;
@@ -24,12 +26,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
   late TabController _tabController;
   double _totalTipsReceived = 0.0;
   List<TipTransaction> _tipTransactions = [];
+  String? _walletAddress;
+  bool _isLoadingWallet = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadTipData();
+    _loadWalletData();
   }
 
   @override
@@ -71,6 +76,21 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
         fromPhotoUrl: null,
       ),
     ];
+  }
+
+  void _loadWalletData() async {
+    if (widget.isCurrentUser) {
+      setState(() {
+        _isLoadingWallet = true;
+      });
+      
+      final walletAddress = await WalletService.getWalletAddress();
+      
+      setState(() {
+        _walletAddress = walletAddress;
+        _isLoadingWallet = false;
+      });
+    }
   }
 
   @override
@@ -160,6 +180,66 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
               fontSize: 16,
             ),
           ),
+          
+          const SizedBox(height: 12),
+          
+          // Wallet Address (for current user)
+          if (widget.isCurrentUser) ...[
+            if (_isLoadingWallet)
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
+                ),
+              )
+            else if (_walletAddress != null)
+              GestureDetector(
+                onTap: () => _copyWalletAddress(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A1A1A),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFF6366F1), width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.account_balance_wallet,
+                        color: const Color(0xFF6366F1),
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _formatWalletAddress(_walletAddress!),
+                        style: const TextStyle(
+                          color: Color(0xFF6366F1),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.copy,
+                        color: Colors.grey[400],
+                        size: 14,
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              Text(
+                'No wallet found',
+                style: TextStyle(
+                  color: Colors.grey[500],
+                  fontSize: 14,
+                ),
+              ),
+          ],
           
           const SizedBox(height: 20),
           
@@ -496,6 +576,24 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       return '${difference.inMinutes}m ago';
     } else {
       return 'now';
+    }
+  }
+
+  String _formatWalletAddress(String address) {
+    if (address.length <= 10) return address;
+    return '${address.substring(0, 6)}...${address.substring(address.length - 4)}';
+  }
+
+  void _copyWalletAddress() async {
+    if (_walletAddress != null) {
+      await Clipboard.setData(ClipboardData(text: _walletAddress!));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Wallet address copied to clipboard'),
+          backgroundColor: Color(0xFF10B981),
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 
