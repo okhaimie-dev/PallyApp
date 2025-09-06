@@ -119,6 +119,19 @@ app.post("/wallet", async (req, res) => {
       return;
     }
 
+    // Verify OTP with the service
+    const otpVerification = OTPService.verifyOTP(email, otp);
+    if (!otpVerification.valid) {
+      res.status(400).json({ error: otpVerification.error || "Invalid OTP" });
+      return;
+    }
+
+    // Ensure the OpenID matches
+    if (otpVerification.openId !== openId) {
+      res.status(400).json({ error: "OTP verification failed" });
+      return;
+    }
+
     // Generate deterministic wallet data using simplified approach
     const SERVER_SECRET = process.env.SERVER_SECRET || "YOUR_SUPER_SECRET_SERVER_KEY_HERE_DO_NOT_HARDCODE_IN_PROD";
     

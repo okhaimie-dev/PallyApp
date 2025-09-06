@@ -463,7 +463,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           // Sign Out Button
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.red.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
