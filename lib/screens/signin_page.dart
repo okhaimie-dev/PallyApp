@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'home_page.dart';
+import 'otp_verification_screen.dart';
 
 
 class SignInPage extends StatefulWidget {
@@ -102,14 +103,31 @@ class _SignInPageState extends State<SignInPage> with TickerProviderStateMixin {
       final GoogleSignInAccount? googleUser = await GoogleSignIn.instance.authenticate();
       
       if (googleUser != null) {
-        // Successfully signed in
+        // Successfully signed in - redirect to OTP verification
         if (mounted) {
-          Navigator.pushReplacement(
+          final walletData = await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => HomePage(user: googleUser),
+              builder: (context) => OTPVerificationScreen(
+                email: googleUser.email,
+                openId: googleUser.id,
+                isNewWallet: true, // Assume new wallet for now
+              ),
             ),
           );
+          
+          // If wallet data is returned, navigate to home page
+          if (walletData != null && mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => HomePage(
+                  userEmail: googleUser.email,
+                  walletData: walletData,
+                ),
+              ),
+            );
+          }
         }
       } else {
         // User cancelled the sign-in
