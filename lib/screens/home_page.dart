@@ -20,6 +20,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   int _selectedIndex = 0;
   String? _walletAddress;
+  String? _privateKey;
   bool _isLoadingWallet = false;
   late TabController _tabController;
   bool _isPrivateKeyCopied = false;
@@ -43,10 +44,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       _isLoadingWallet = true;
     });
     
-    final walletAddress = await WalletService.getWalletAddress();
+    final walletData = await WalletService.getStoredWalletData();
     
     setState(() {
-      _walletAddress = walletAddress;
+      _walletAddress = walletData?.walletAddress;
+      _privateKey = walletData?.privateKey;
       _isLoadingWallet = false;
     });
   }
@@ -966,10 +968,23 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   void _copyPrivateKey() async {
-    // Mock private key - in a real app, this would be the actual private key
-    const String mockPrivateKey = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    print('🔑 Copy private key requested');
+    print('🔑 Private key available: ${_privateKey != null}');
     
-    await Clipboard.setData(ClipboardData(text: mockPrivateKey));
+    if (_privateKey == null || _privateKey!.isEmpty) {
+      print('❌ No private key found');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No private key found. Please sign in again.'),
+          backgroundColor: Color(0xFFEF4444),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+    
+    print('✅ Copying private key to clipboard');
+    await Clipboard.setData(ClipboardData(text: _privateKey!));
     
     setState(() {
       _isPrivateKeyCopied = true;
@@ -977,10 +992,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     
     // Show toast message
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Private key copied to clipboard'),
-        backgroundColor: const Color(0xFF10B981),
-        duration: const Duration(seconds: 2),
+      const SnackBar(
+        content: Text('Private key copied to clipboard'),
+        backgroundColor: Color(0xFF10B981),
+        duration: Duration(seconds: 2),
       ),
     );
     

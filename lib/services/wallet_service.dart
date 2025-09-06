@@ -125,6 +125,12 @@ class WalletService {
     final walletData = await getStoredWalletData();
     return walletData?.walletAddress;
   }
+
+  /// Get private key for export
+  static Future<String?> getPrivateKey() async {
+    final walletData = await getStoredWalletData();
+    return walletData?.privateKey;
+  }
 }
 
 class WalletData {
