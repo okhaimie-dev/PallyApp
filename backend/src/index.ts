@@ -94,10 +94,7 @@ app.post("/generate-otp", async (req, res) => {
 
     res.json({
       success: true,
-      message: "OTP sent to email",
-      // For testing purposes, return the OTP code
-      // In production, remove this line
-      otpCode: otpCode
+      message: "OTP sent to email"
     });
 
   } catch (err: any) {
@@ -116,8 +113,8 @@ app.post("/wallet", async (req, res) => {
       return;
     }
 
-    // For testing, accept any 6-digit OTP or "1234"
-    if (otp !== "1234" && (!/^\d{6}$/.test(otp))) {
+    // Validate OTP format (6 digits)
+    if (!/^\d{6}$/.test(otp)) {
       res.status(400).json({ error: "Invalid OTP format" });
       return;
     }
@@ -176,13 +173,14 @@ app.post("/wallet", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = parseInt(process.env.PORT || '3000', 10);
 console.log('🚀 Starting server...');
 console.log('📡 NODE_URL:', NODE_URL);
 console.log('🔧 PORT:', PORT);
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ API listening on http://localhost:${PORT}`);
+  console.log(`🌐 Network accessible at http://192.168.0.106:${PORT}`);
   console.log('🎯 Available endpoints:');
   console.log('  GET  / - Health check');
   console.log('  GET  /test-email - Test email connectivity');

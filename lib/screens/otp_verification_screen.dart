@@ -44,7 +44,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:3000/generate-otp'),
+        Uri.parse('http://192.168.0.106:3000/generate-otp'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'email': widget.email,
@@ -57,10 +57,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       if (response.statusCode == 200 && data['success']) {
         setState(() {
           _successMessage = 'OTP sent to ${widget.email}';
-          // For testing, show the OTP code
-          if (data['otpCode'] != null) {
-            _successMessage = 'OTP sent to ${widget.email}\nTest OTP: ${data['otpCode']}';
-          }
         });
       } else {
         setState(() {
@@ -93,7 +89,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:3000/wallet'), // Use the new single endpoint
+        Uri.parse('http://192.168.0.106:3000/wallet'), // Use the new single endpoint
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'email': widget.email,
@@ -307,29 +303,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
             
             const Spacer(),
             
-            // Test OTP Button (for development)
-            if (widget.isNewWallet)
-              Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : () {
-                    _otpController.text = '1234';
-                    _verifyOTP();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    'Use Test OTP (1234)',
-                    style: TextStyle(fontSize: 14),
-                  ),
-                ),
-              ),
           ],
         ),
       ),
