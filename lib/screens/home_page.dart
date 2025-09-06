@@ -6,6 +6,7 @@ import 'chat_page.dart';
 import 'notifications_screen.dart';
 import 'my_tips_page.dart';
 import 'edit_profile_screen.dart';
+import '../services/wallet_service.dart';
 
 class HomePage extends StatefulWidget {
   final GoogleSignInAccount user;
@@ -18,6 +19,8 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   int _selectedIndex = 0;
+  String? _walletAddress;
+  bool _isLoadingWallet = false;
   late TabController _tabController;
   bool _isPrivateKeyCopied = false;
   
@@ -26,12 +29,44 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadWalletData();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _loadWalletData() async {
+    setState(() {
+      _isLoadingWallet = true;
+    });
+    
+    final walletAddress = await WalletService.getWalletAddress();
+    
+    setState(() {
+      _walletAddress = walletAddress;
+      _isLoadingWallet = false;
+    });
+  }
+
+  String _formatWalletAddress(String address) {
+    if (address.length <= 10) return address;
+    return '${address.substring(0, 6)}...${address.substring(address.length - 4)}';
+  }
+
+  void _copyWalletAddress() async {
+    if (_walletAddress != null) {
+      await Clipboard.setData(ClipboardData(text: _walletAddress!));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Wallet address copied to clipboard'),
+          backgroundColor: Color(0xFF10B981),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override
@@ -393,22 +428,78 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF6366F1).withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.3)),
-                  ),
-                  child: Text(
-                    'ID: ${widget.user.id}',
-                    style: TextStyle(
-                      color: Colors.grey[300],
-                      fontSize: 12,
-                      fontFamily: 'monospace',
+                // Wallet Address Display
+                if (_isLoadingWallet)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6366F1).withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.3)),
+                    ),
+                    child: const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
+                      ),
+                    ),
+                  )
+                else if (_walletAddress != null)
+                  GestureDetector(
+                    onTap: _copyWalletAddress,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6366F1).withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.account_balance_wallet,
+                            color: const Color(0xFF6366F1),
+                            size: 14,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _formatWalletAddress(_walletAddress!),
+                            style: TextStyle(
+                              color: Colors.grey[300],
+                              fontSize: 12,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.copy,
+                            color: Colors.grey[400],
+                            size: 12,
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      'No wallet found',
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 12,
+                        fontFamily: 'monospace',
+                      ),
                     ),
                   ),
-                ),
                 const SizedBox(height: 24),
                 Row(
                   children: [

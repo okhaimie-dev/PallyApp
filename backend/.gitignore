@@ -97,3 +97,10 @@ jspm_packages/
 # OS
 .DS_Store
 Thumbs.db
+
+# Database files
+wallets.db
+data/
+*.db
+*.sqlite
+*.sqlite3

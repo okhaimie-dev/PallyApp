@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import 'home_page.dart';
 import 'otp_verification_screen.dart';
 
@@ -76,6 +77,7 @@ class _SignInPageState extends State<SignInPage> with TickerProviderStateMixin {
     });
   }
 
+
   @override
   void dispose() {
     _fadeController.dispose();
@@ -119,11 +121,21 @@ class _SignInPageState extends State<SignInPage> with TickerProviderStateMixin {
           
           // If wallet data is returned, navigate to home page
           if (walletData != null && mounted) {
-            // Store wallet data in SharedPreferences for persistence
+            // Store wallet data in SharedPreferences using WalletService format
             final prefs = await SharedPreferences.getInstance();
-            await prefs.setString('privateKey', walletData['privateKey'] ?? '');
-            await prefs.setString('publicKey', walletData['publicKey'] ?? '');
-            await prefs.setString('accountAddress', walletData['accountAddress'] ?? '');
+            
+            // Store wallet data as JSON object for WalletService
+            final walletJson = json.encode({
+              'walletAddress': walletData['accountAddress'] ?? '',
+              'privateKey': walletData['privateKey'] ?? '',
+              'publicKey': walletData['publicKey'] ?? '',
+              'isNewWallet': walletData['isNewWallet'] ?? false,
+            });
+            print('💾 Storing wallet data: $walletJson');
+            await prefs.setString('user_wallet_data', walletJson);
+            print('✅ Wallet data stored successfully');
+            
+            // Also store user info
             await prefs.setString('userEmail', googleUser.email);
             await prefs.setString('userOpenId', googleUser.id);
             

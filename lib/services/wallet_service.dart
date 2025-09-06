@@ -77,14 +77,19 @@ class WalletService {
       final prefs = await SharedPreferences.getInstance();
       final walletJson = prefs.getString(_walletKey);
       
+      print('🔍 WalletService: Looking for wallet data with key: $_walletKey');
+      print('🔍 WalletService: Found wallet JSON: $walletJson');
+      
       if (walletJson != null) {
         final walletMap = jsonDecode(walletJson);
+        print('🔍 WalletService: Parsed wallet map: $walletMap');
         return WalletData.fromJson(walletMap);
       }
       
+      print('🔍 WalletService: No wallet data found');
       return null;
     } catch (e) {
-      print('Error getting stored wallet data: $e');
+      print('❌ Error getting stored wallet data: $e');
       return null;
     }
   }
