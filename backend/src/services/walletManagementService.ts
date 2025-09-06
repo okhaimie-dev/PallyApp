@@ -1,6 +1,5 @@
 import { DatabaseService, WalletRecord } from "./databaseService";
 import { WalletKeyService, WalletKeyResult } from "./walletKeyService";
-import * as crypto from "crypto";
 
 export interface WalletResponse {
   success: boolean;

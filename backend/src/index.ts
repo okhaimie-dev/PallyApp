@@ -2,9 +2,12 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import * as crypto from "crypto";
+import { createServer } from "http";
 import { OTPService } from "./services/otpService";
 import { WalletKeyService } from "./services/walletKeyService";
 import { WalletManagementService } from "./services/walletManagementService";
+import { GroupService } from "./services/groupService";
+import { WebSocketService } from "./services/websocketService";
 import emailService from "./services/emailService";
 import {
   generalLimiter,
@@ -206,14 +209,261 @@ app.get("/admin/wallet-stats", async (req, res) => {
   }
 });
 
+// ========== GROUP CHAT API ENDPOINTS ==========
+
+// Create a new group
+app.post("/groups", async (req, res) => {
+  try {
+    const { name, description, category, icon, color, isPrivate, userEmail } = req.body;
+
+    if (!name || !category || !userEmail) {
+      res.status(400).json({ error: "Name, category, and userEmail are required" });
+      return;
+    }
+
+    const groupService = GroupService.getInstance();
+    const result = groupService.createGroup({
+      name,
+      description: description || "",
+      category,
+      icon: icon || "group",
+      color: color || "#6366F1",
+      isPrivate: Boolean(isPrivate),
+      createdBy: userEmail
+    });
+
+    if (result.success) {
+      res.status(201).json(result);
+    } else {
+      res.status(400).json(result);
+    }
+
+  } catch (err: any) {
+    console.error("❌ Error creating group:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get user's groups
+app.get("/groups/user/:userEmail", async (req, res) => {
+  try {
+    const { userEmail } = req.params;
+
+    if (!userEmail) {
+      res.status(400).json({ error: "User email is required" });
+      return;
+    }
+
+    const groupService = GroupService.getInstance();
+    const result = groupService.getUserGroups(userEmail);
+
+    res.json(result);
+
+  } catch (err: any) {
+    console.error("❌ Error getting user groups:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get public groups by category
+app.get("/groups/public/:category", async (req, res) => {
+  try {
+    const { category } = req.params;
+
+    if (!category) {
+      res.status(400).json({ error: "Category is required" });
+      return;
+    }
+
+    const groupService = GroupService.getInstance();
+    const result = groupService.getPublicGroupsByCategory(category);
+
+    res.json(result);
+
+  } catch (err: any) {
+    console.error("❌ Error getting public groups:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get group by ID
+app.get("/groups/:groupId", async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { userEmail } = req.query;
+
+    if (!groupId || !userEmail) {
+      res.status(400).json({ error: "Group ID and user email are required" });
+      return;
+    }
+
+    const groupService = GroupService.getInstance();
+    const result = groupService.getGroupById(parseInt(groupId), userEmail as string);
+
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(404).json(result);
+    }
+
+  } catch (err: any) {
+    console.error("❌ Error getting group:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Join a group
+app.post("/groups/:groupId/join", async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { userEmail } = req.body;
+
+    if (!groupId || !userEmail) {
+      res.status(400).json({ error: "Group ID and user email are required" });
+      return;
+    }
+
+    const groupService = GroupService.getInstance();
+    const result = groupService.joinGroup(parseInt(groupId), userEmail);
+
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+
+  } catch (err: any) {
+    console.error("❌ Error joining group:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Leave a group
+app.post("/groups/:groupId/leave", async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { userEmail } = req.body;
+
+    if (!groupId || !userEmail) {
+      res.status(400).json({ error: "Group ID and user email are required" });
+      return;
+    }
+
+    const groupService = GroupService.getInstance();
+    const result = groupService.leaveGroup(parseInt(groupId), userEmail);
+
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+
+  } catch (err: any) {
+    console.error("❌ Error leaving group:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get group members
+app.get("/groups/:groupId/members", async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { userEmail } = req.query;
+
+    if (!groupId || !userEmail) {
+      res.status(400).json({ error: "Group ID and user email are required" });
+      return;
+    }
+
+    const groupService = GroupService.getInstance();
+    const result = groupService.getGroupMembers(parseInt(groupId), userEmail as string);
+
+    res.json(result);
+
+  } catch (err: any) {
+    console.error("❌ Error getting group members:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Send message to group
+app.post("/groups/:groupId/messages", async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { senderEmail, content, messageType } = req.body;
+
+    if (!groupId || !senderEmail || !content) {
+      res.status(400).json({ error: "Group ID, sender email, and content are required" });
+      return;
+    }
+
+    const groupService = GroupService.getInstance();
+    const result = groupService.sendMessage(
+      parseInt(groupId), 
+      senderEmail, 
+      content, 
+      messageType || 'text'
+    );
+
+    if (result.success) {
+      res.status(201).json(result);
+    } else {
+      res.status(400).json(result);
+    }
+
+  } catch (err: any) {
+    console.error("❌ Error sending message:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get group messages
+app.get("/groups/:groupId/messages", async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { userEmail, limit, offset } = req.query;
+
+    if (!groupId || !userEmail) {
+      res.status(400).json({ error: "Group ID and user email are required" });
+      return;
+    }
+
+    const groupService = GroupService.getInstance();
+    const result = groupService.getGroupMessages(
+      parseInt(groupId), 
+      userEmail as string,
+      limit ? parseInt(limit as string) : 50,
+      offset ? parseInt(offset as string) : 0
+    );
+
+    res.json(result);
+
+  } catch (err: any) {
+    console.error("❌ Error getting group messages:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = parseInt(process.env.PORT || '3000', 10);
 console.log('🚀 Starting server...');
 console.log('📡 NODE_URL:', NODE_URL);
 console.log('🔧 PORT:', PORT);
 
-app.listen(PORT, '0.0.0.0', () => {
+// Create HTTP server
+const httpServer = createServer(app);
+
+// Initialize WebSocket service
+const wsService = WebSocketService.getInstance(httpServer);
+
+// Connect services
+const groupService = GroupService.getInstance();
+groupService.setWebSocketService(wsService);
+
+// Start server
+httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ API listening on http://localhost:${PORT}`);
   console.log(`🌐 Network accessible at http://192.168.0.106:${PORT}`);
+  console.log(`🔌 WebSocket server running on ws://localhost:${PORT}`);
   console.log('🎯 Available endpoints:');
   console.log('  GET  / - Health check');
   console.log('  GET  /test-email - Test email connectivity');
@@ -221,4 +471,19 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('  POST /wallet - Create/get wallet with OTP');
   console.log('  GET  /wallet/:email - Get wallet info (without private key)');
   console.log('  GET  /admin/wallet-stats - Get wallet statistics');
+  console.log('  POST /groups - Create new group');
+  console.log('  GET  /groups/user/:userEmail - Get user groups');
+  console.log('  GET  /groups/public/:category - Get public groups by category');
+  console.log('  GET  /groups/:groupId - Get group details');
+  console.log('  POST /groups/:groupId/join - Join group');
+  console.log('  POST /groups/:groupId/leave - Leave group');
+  console.log('  GET  /groups/:groupId/members - Get group members');
+  console.log('  POST /groups/:groupId/messages - Send message');
+  console.log('  GET  /groups/:groupId/messages - Get group messages');
+  console.log('🔌 WebSocket events:');
+  console.log('  authenticate - Authenticate user');
+  console.log('  join_group - Join group chat');
+  console.log('  leave_group - Leave group chat');
+  console.log('  send_message - Send message');
+  console.log('  typing_start/stop - Typing indicators');
 });

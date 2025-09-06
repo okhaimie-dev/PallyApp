@@ -7,6 +7,8 @@ import 'notifications_screen.dart';
 import 'my_tips_page.dart';
 import 'edit_profile_screen.dart';
 import '../services/wallet_service.dart';
+import '../services/group_service.dart';
+import '../services/websocket_service.dart';
 
 class HomePage extends StatefulWidget {
   final GoogleSignInAccount user;
@@ -24,6 +26,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   bool _isLoadingWallet = false;
   late TabController _tabController;
   bool _isPrivateKeyCopied = false;
+  List<Group> _userGroups = [];
+  bool _isLoadingGroups = false;
   
 
   @override
@@ -31,6 +35,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _loadWalletData();
+    _loadUserGroups();
+    _connectWebSocket();
+  }
+
+  void _connectWebSocket() async {
+    final wsService = WebSocketService.getInstance();
+    if (!wsService.isConnected) {
+      await wsService.connect(widget.user.email);
+    }
   }
 
   @override
@@ -53,6 +66,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     });
   }
 
+  void _loadUserGroups() async {
+    setState(() {
+      _isLoadingGroups = true;
+    });
+    
+    final groups = await GroupService.getUserGroups(widget.user.email);
+    
+    setState(() {
+      _userGroups = groups;
+      _isLoadingGroups = false;
+    });
+  }
+
   String _formatWalletAddress(String address) {
     if (address.length <= 10) return address;
     return '${address.substring(0, 6)}...${address.substring(address.length - 4)}';
@@ -68,6 +94,35 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           duration: Duration(seconds: 2),
         ),
       );
+    }
+  }
+
+  IconData _getIconFromString(String iconString) {
+    switch (iconString) {
+      case 'computer':
+        return Icons.computer;
+      case 'sports_esports':
+        return Icons.sports_esports;
+      case 'music_note':
+        return Icons.music_note;
+      case 'palette':
+        return Icons.palette;
+      case 'sports_soccer':
+        return Icons.sports_soccer;
+      case 'business':
+        return Icons.business;
+      case 'school':
+        return Icons.school;
+      default:
+        return Icons.group;
+    }
+  }
+
+  Color _getColorFromString(String colorString) {
+    try {
+      return Color(int.parse(colorString.replaceFirst('#', '0xFF')));
+    } catch (e) {
+      return const Color(0xFF6366F1);
     }
   }
 
@@ -363,13 +418,58 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           
           const SizedBox(height: 16),
           
-          _buildGroupCard(
-            'Family Chat',
-            'Private family group',
-            '8 members',
-            Icons.family_restroom,
-            const Color(0xFF10B981),
-          ),
+          // User Groups
+          if (_isLoadingGroups)
+            const Center(
+              child: CircularProgressIndicator(),
+            )
+          else if (_userGroups.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A1A),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.group_off,
+                    color: Colors.grey[400],
+                    size: 48,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No groups yet',
+                    style: TextStyle(
+                      color: Colors.grey[400],
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Create your first group to start chatting with friends!',
+                    style: TextStyle(
+                      color: Colors.grey[500],
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            )
+          else
+            ..._userGroups.map((group) => GestureDetector(
+              onTap: () => _navigateToGroupChat(context, group),
+              child: _buildGroupCard(
+                group.name,
+                group.description.isNotEmpty ? group.description : 'Private group',
+                '1 member', // TODO: Get actual member count
+                _getIconFromString(group.icon),
+                _getColorFromString(group.color),
+              ),
+            )),
           _buildGroupCard(
             'Work Team',
             'Project collaboration',
@@ -798,13 +898,38 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   void _navigateToChat(BuildContext context, String groupName, IconData groupIcon, Color groupColor) {
+    // For now, create a mock group for existing hardcoded groups
+    final mockGroup = Group(
+      id: 0,
+      name: groupName,
+      description: 'Mock group for existing functionality',
+      category: 'General',
+      icon: 'group',
+      color: '#6366F1',
+      isPrivate: false,
+      createdBy: widget.user.email,
+      createdAt: DateTime.now().toIso8601String(),
+      updatedAt: DateTime.now().toIso8601String(),
+    );
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ChatPage(
-          groupName: groupName,
-          groupIcon: groupIcon,
-          groupColor: groupColor,
+          group: mockGroup,
+          userEmail: widget.user.email,
+        ),
+      ),
+    );
+  }
+
+  void _navigateToGroupChat(BuildContext context, Group group) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChatPage(
+          group: group,
+          userEmail: widget.user.email,
         ),
       ),
     );
@@ -936,15 +1061,51 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             child: Text('Cancel', style: TextStyle(color: Colors.grey[400])),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               if (nameController.text.isNotEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Created "${nameController.text}" group in $selectedCategory category'),
-                    backgroundColor: const Color(0xFF10B981),
+                // Show loading
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => const Center(
+                    child: CircularProgressIndicator(),
                   ),
                 );
+
+                // Create group
+                final response = await GroupService.createGroup(
+                  name: nameController.text,
+                  description: descriptionController.text,
+                  category: selectedCategory,
+                  icon: categories.firstWhere((cat) => cat['name'] == selectedCategory)['icon'].toString(),
+                  color: categories.firstWhere((cat) => cat['name'] == selectedCategory)['color'].toString(),
+                  isPrivate: true,
+                  userEmail: widget.user.email,
+                );
+
+                // Hide loading
                 Navigator.pop(context);
+
+                if (response != null && response.success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Created "${nameController.text}" group successfully!'),
+                      backgroundColor: const Color(0xFF10B981),
+                    ),
+                  );
+                  
+                  // Reload groups
+                  _loadUserGroups();
+                  
+                  Navigator.pop(context);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to create group: ${response?.message ?? "Unknown error"}'),
+                      backgroundColor: const Color(0xFFEF4444),
+                    ),
+                  );
+                }
               }
             },
             style: ElevatedButton.styleFrom(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'chat_page.dart';
+import '../services/group_service.dart';
 
 class CategoriesScreen extends StatelessWidget {
   final String categoryName;
@@ -187,13 +188,26 @@ class CategoriesScreen extends StatelessWidget {
   }
 
   void _navigateToChat(BuildContext context, String groupName) {
+    // Create a mock group for existing hardcoded groups
+    final mockGroup = Group(
+      id: 0,
+      name: groupName,
+      description: 'Mock group for existing functionality',
+      category: categoryName,
+      icon: 'group',
+      color: '#6366F1',
+      isPrivate: false,
+      createdBy: 'system@example.com',
+      createdAt: DateTime.now().toIso8601String(),
+      updatedAt: DateTime.now().toIso8601String(),
+    );
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ChatPage(
-          groupName: groupName,
-          groupIcon: categoryIcon,
-          groupColor: categoryColor,
+          group: mockGroup,
+          userEmail: 'user@example.com', // This should be passed from the parent widget
         ),
       ),
     );

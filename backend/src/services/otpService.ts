@@ -1,4 +1,3 @@
-import * as crypto from "crypto";
 
 export interface OTPData {
   code: string;

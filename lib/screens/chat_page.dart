@@ -1,16 +1,17 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'user_profile_screen.dart';
+import '../services/group_service.dart';
+import '../services/websocket_service.dart';
 
 class ChatPage extends StatefulWidget {
-  final String groupName;
-  final IconData groupIcon;
-  final Color groupColor;
+  final Group group;
+  final String userEmail;
 
   const ChatPage({
     super.key,
-    required this.groupName,
-    required this.groupIcon,
-    required this.groupColor,
+    required this.group,
+    required this.userEmail,
   });
 
   @override
@@ -19,44 +20,163 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> {
   final TextEditingController _messageController = TextEditingController();
-  late List<ChatMessage> _messages;
+  List<ChatMessage> _messages = [];
+  bool _isLoadingMessages = false;
+  bool _isSendingMessage = false;
+  late WebSocketService _wsService;
+  bool _isTyping = false;
+  Timer? _typingTimer;
 
   @override
   void initState() {
     super.initState();
-    _messages = [
-      ChatMessage(
-        text: "Welcome to ${widget.groupName}! 👋",
-        isMe: false,
-        senderName: "System",
-        timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
-      ),
-      ChatMessage(
-        text: "Hey everyone! Excited to be here!",
-        isMe: false,
-        senderName: "Alex",
-        timestamp: DateTime.now().subtract(const Duration(minutes: 3)),
-      ),
-      ChatMessage(
-        text: "Same here! Looking forward to great discussions.",
-        isMe: true,
-        senderName: "You",
-        timestamp: DateTime.now().subtract(const Duration(minutes: 2)),
-      ),
-      ChatMessage(
-        text: "Anyone working on any interesting projects?",
-        isMe: false,
-        senderName: "Sarah",
-        timestamp: DateTime.now().subtract(const Duration(minutes: 1)),
-      ),
-    ];
+    _wsService = WebSocketService.getInstance();
+    _loadMessages();
+    _setupWebSocket();
   }
 
   @override
   void dispose() {
     _messageController.dispose();
+    _typingTimer?.cancel();
+    _wsService.leaveGroup();
     super.dispose();
   }
+
+  void _setupWebSocket() async {
+    // Connect to WebSocket if not already connected
+    if (!_wsService.isConnected) {
+      await _wsService.connect(widget.userEmail);
+    }
+
+    // Join the group
+    await _wsService.joinGroup(widget.group.id);
+
+    // Listen for new messages
+    _wsService.messageStream.listen((data) {
+      if (data['groupId'] == widget.group.id) {
+        setState(() {
+          _messages.add(ChatMessage(
+            text: data['content'],
+            isMe: data['senderEmail'] == widget.userEmail,
+            senderName: data['senderEmail'] == widget.userEmail ? "You" : _getDisplayName(data['senderEmail']),
+            timestamp: DateTime.parse(data['createdAt']),
+          ));
+        });
+      }
+    });
+
+    // Listen for typing indicators
+    _wsService.typingStream.listen((data) {
+      if (data['groupId'] == widget.group.id && data['userEmail'] != widget.userEmail) {
+        // Handle typing indicators if needed
+        print('User ${data['userEmail']} is ${data['isTyping'] ? 'typing' : 'not typing'}');
+      }
+    });
+  }
+
+  void _loadMessages() async {
+    setState(() {
+      _isLoadingMessages = true;
+    });
+
+    try {
+      final messages = await GroupService.getGroupMessages(
+        groupId: widget.group.id,
+        userEmail: widget.userEmail,
+        limit: 50,
+      );
+
+      setState(() {
+        _messages = messages.map((msg) => ChatMessage(
+          text: msg.content,
+          isMe: msg.senderEmail == widget.userEmail,
+          senderName: msg.senderEmail == widget.userEmail ? "You" : _getDisplayName(msg.senderEmail),
+          timestamp: DateTime.parse(msg.createdAt),
+        )).toList();
+        _isLoadingMessages = false;
+      });
+    } catch (e) {
+      print('Error loading messages: $e');
+      setState(() {
+        _isLoadingMessages = false;
+      });
+    }
+  }
+
+  String _getDisplayName(String email) {
+    // Extract name from email (simple implementation)
+    return email.split('@')[0];
+  }
+
+  IconData _getIconFromString(String iconString) {
+    switch (iconString) {
+      case 'computer':
+        return Icons.computer;
+      case 'sports_esports':
+        return Icons.sports_esports;
+      case 'music_note':
+        return Icons.music_note;
+      case 'palette':
+        return Icons.palette;
+      case 'sports_soccer':
+        return Icons.sports_soccer;
+      case 'business':
+        return Icons.business;
+      case 'school':
+        return Icons.school;
+      default:
+        return Icons.group;
+    }
+  }
+
+  Color _getColorFromString(String colorString) {
+    try {
+      return Color(int.parse(colorString.replaceFirst('#', '0xFF')));
+    } catch (e) {
+      return const Color(0xFF6366F1);
+    }
+  }
+
+  void _sendMessage() async {
+    if (_messageController.text.trim().isEmpty || _isSendingMessage) return;
+
+    final messageText = _messageController.text.trim();
+    _messageController.clear();
+
+    setState(() {
+      _isSendingMessage = true;
+    });
+
+    try {
+      // Send message via WebSocket for real-time delivery
+      await _wsService.sendMessage(
+        groupId: widget.group.id,
+        content: messageText,
+      );
+
+      // Stop typing indicator
+      _wsService.stopTyping(widget.group.id);
+      _isTyping = false;
+
+      // The message will be added to the list via WebSocket stream
+      // No need to add it manually here
+    } catch (e) {
+      print('Error sending message: $e');
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to send message'),
+          backgroundColor: Color(0xFFEF4444),
+        ),
+      );
+    } finally {
+      setState(() {
+        _isSendingMessage = false;
+      });
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -75,10 +195,10 @@ class _ChatPageState extends State<ChatPage> {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: widget.groupColor.withOpacity(0.2),
+                color: _getColorFromString(widget.group.color).withOpacity(0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(widget.groupIcon, color: widget.groupColor, size: 20),
+              child: Icon(_getIconFromString(widget.group.icon), color: _getColorFromString(widget.group.color), size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -86,7 +206,7 @@ class _ChatPageState extends State<ChatPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.groupName,
+                    widget.group.name,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -94,7 +214,7 @@ class _ChatPageState extends State<ChatPage> {
                     ),
                   ),
                   Text(
-                    "2.1k members",
+                    widget.group.isPrivate ? 'Private Group' : 'Public Group',
                     style: TextStyle(
                       color: Colors.grey[400],
                       fontSize: 12,
@@ -116,14 +236,18 @@ class _ChatPageState extends State<ChatPage> {
         children: [
           // Messages List
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                return _buildMessageBubble(message);
-              },
-            ),
+            child: _isLoadingMessages
+                ? const Center(
+                    child: CircularProgressIndicator(),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) {
+                      final message = _messages[index];
+                      return _buildMessageBubble(message);
+                    },
+                  ),
           ),
           
           // Message Input
@@ -154,24 +278,49 @@ class _ChatPageState extends State<ChatPage> {
                         contentPadding: EdgeInsets.zero,
                         isDense: true,
                       ),
+                      onChanged: (text) {
+                        if (text.isNotEmpty && !_isTyping) {
+                          _isTyping = true;
+                          _wsService.startTyping(widget.group.id);
+                        }
+                        
+                        // Reset typing timer
+                        _typingTimer?.cancel();
+                        _typingTimer = Timer(const Duration(seconds: 2), () {
+                          if (_isTyping) {
+                            _isTyping = false;
+                            _wsService.stopTyping(widget.group.id);
+                          }
+                        });
+                      },
+                      onSubmitted: (value) => _sendMessage(),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 GestureDetector(
-                  onTap: _sendMessage,
+                  onTap: _isSendingMessage ? null : _sendMessage,
                   child: Container(
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: widget.groupColor,
+                      color: _getColorFromString(widget.group.color),
                       borderRadius: BorderRadius.circular(18),
                     ),
-                    child: const Icon(
-                      Icons.send,
-                      color: Colors.white,
-                      size: 18,
-                    ),
+                    child: _isSendingMessage
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Icon(
+                            Icons.send,
+                            color: Colors.white,
+                            size: 18,
+                          ),
                   ),
                 ),
               ],
@@ -194,11 +343,11 @@ class _ChatPageState extends State<ChatPage> {
               onTap: () => _navigateToUserProfile(message.senderName),
               child: CircleAvatar(
                 radius: 16,
-                backgroundColor: widget.groupColor.withOpacity(0.3),
+                backgroundColor: _getColorFromString(widget.group.color).withOpacity(0.3),
                 child: Text(
                   message.senderName[0].toUpperCase(),
                   style: TextStyle(
-                    color: widget.groupColor,
+                    color: _getColorFromString(widget.group.color),
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -213,7 +362,7 @@ class _ChatPageState extends State<ChatPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: message.isMe 
-                    ? widget.groupColor 
+                    ? _getColorFromString(widget.group.color)
                     : const Color(0xFF1A1A1A),
                 borderRadius: BorderRadius.circular(18),
               ),
@@ -224,7 +373,7 @@ class _ChatPageState extends State<ChatPage> {
                     Text(
                       message.senderName,
                       style: TextStyle(
-                        color: widget.groupColor,
+                        color: _getColorFromString(widget.group.color),
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
@@ -271,21 +420,6 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  void _sendMessage() {
-    if (_messageController.text.trim().isNotEmpty) {
-      setState(() {
-        _messages.add(
-          ChatMessage(
-            text: _messageController.text.trim(),
-            isMe: true,
-            senderName: "You",
-            timestamp: DateTime.now(),
-          ),
-        );
-      });
-      _messageController.clear();
-    }
-  }
 
   void _navigateToUserProfile(String userName) {
     Navigator.push(
