@@ -32,6 +32,7 @@
     "helmet": "^8.1.0",
     "nodemailer": "^7.0.6",
     "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "starknet": "^7.6.4"
   },
   "devDependencies": {

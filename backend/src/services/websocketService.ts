@@ -74,9 +74,12 @@ export class WebSocketService {
             return;
           }
 
-          // Verify user is member of the group
+          // Verify user is member of the group (skip for global groups)
+          const group = this.dbService.getGroupById(data.groupId);
+          const isGlobalGroup = group && !group.isPrivate;
           const isMember = this.dbService.isGroupMember(data.groupId, data.userEmail);
-          if (!isMember) {
+          
+          if (!isGlobalGroup && !isMember) {
             socket.emit('error', { message: 'You are not a member of this group' });
             return;
           }
@@ -142,9 +145,12 @@ export class WebSocketService {
             return;
           }
 
-          // Verify user is member of the group
+          // Verify user is member of the group (skip for global groups)
+          const group = this.dbService.getGroupById(data.groupId);
+          const isGlobalGroup = group && !group.isPrivate;
           const isMember = this.dbService.isGroupMember(data.groupId, data.senderEmail);
-          if (!isMember) {
+          
+          if (!isGlobalGroup && !isMember) {
             socket.emit('error', { message: 'You are not a member of this group' });
             return;
           }

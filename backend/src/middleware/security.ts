@@ -49,10 +49,12 @@ export const securityHeaders = helmet({
 
 // Request validation middleware
 export const validateRequest = (req: Request, res: Response, next: NextFunction): void => {
-  // Check for required headers
-  if (!req.headers["content-type"] || !req.headers["content-type"].includes("application/json")) {
-    res.status(400).json({ error: "Content-Type must be application/json" });
-    return;
+  // Only require Content-Type for POST, PUT, PATCH requests
+  if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+    if (!req.headers["content-type"] || !req.headers["content-type"].includes("application/json")) {
+      res.status(400).json({ error: "Content-Type must be application/json" });
+      return;
+    }
   }
 
   // Check request size (limit to 1MB)

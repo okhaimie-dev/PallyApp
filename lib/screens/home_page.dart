@@ -118,12 +118,23 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
+  String _getIconString(IconData icon) {
+    if (icon == Icons.flutter_dash) return 'computer';
+    if (icon == Icons.rocket_launch) return 'business';
+    if (icon == Icons.design_services) return 'palette';
+    return 'group';
+  }
+
   Color _getColorFromString(String colorString) {
     try {
       return Color(int.parse(colorString.replaceFirst('#', '0xFF')));
     } catch (e) {
       return const Color(0xFF6366F1);
     }
+  }
+
+  String _getColorString(Color color) {
+    return '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
   }
 
   @override
@@ -332,26 +343,30 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           
           const SizedBox(height: 16),
           
-          _buildGroupCard(
+          // Popular Global Groups - accessible to everyone
+          _buildGlobalGroupCard(
             'Flutter Developers',
             'Join the global Flutter community',
             '12.5k members',
             Icons.flutter_dash,
             const Color(0xFF00D4AA),
+            groupId: 16, // Real group ID
           ),
-          _buildGroupCard(
+          _buildGlobalGroupCard(
             'Startup Founders',
             'Connect with entrepreneurs worldwide',
             '8.2k members',
             Icons.rocket_launch,
             const Color(0xFF6366F1),
+            groupId: 17, // Real group ID
           ),
-          _buildGroupCard(
+          _buildGlobalGroupCard(
             'Design Community',
             'Share and discover amazing designs',
             '15.1k members',
             Icons.design_services,
             const Color(0xFFEC4899),
+            groupId: 18, // Real group ID
           ),
         ],
       ),
@@ -470,20 +485,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 _getColorFromString(group.color),
               ),
             )),
-          _buildGroupCard(
-            'Work Team',
-            'Project collaboration',
-            '12 members',
-            Icons.work,
-            const Color(0xFFF59E0B),
-          ),
-          _buildGroupCard(
-            'College Friends',
-            'University memories',
-            '25 members',
-            Icons.school,
-            const Color(0xFF8B5CF6),
-          ),
         ],
       ),
     );
@@ -726,8 +727,84 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildGroupCard(String title, String description, String members, IconData icon, Color color) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF2A2A2A), width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    color: Colors.grey[400],
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  members,
+                  style: TextStyle(
+                    color: Colors.grey[500],
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            Icons.arrow_forward_ios,
+            color: Colors.grey[600],
+            size: 16,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGlobalGroupCard(String title, String description, String members, IconData icon, Color color, {required int groupId}) {
+    // Create a real group object for global groups
+    final globalGroup = Group(
+      id: groupId,
+      name: title,
+      description: description,
+      category: 'Global',
+      icon: _getIconString(icon),
+      color: _getColorString(color),
+      isPrivate: false,
+      createdBy: 'system',
+      createdAt: DateTime.now().toIso8601String(),
+      updatedAt: DateTime.now().toIso8601String(),
+    );
+
     return GestureDetector(
-      onTap: () => _navigateToChat(context, title, icon, color),
+      onTap: () => _navigateToGroupChat(context, globalGroup),
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(20),
@@ -897,31 +974,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  void _navigateToChat(BuildContext context, String groupName, IconData groupIcon, Color groupColor) {
-    // For now, create a mock group for existing hardcoded groups
-    final mockGroup = Group(
-      id: 0,
-      name: groupName,
-      description: 'Mock group for existing functionality',
-      category: 'General',
-      icon: 'group',
-      color: '#6366F1',
-      isPrivate: false,
-      createdBy: widget.user.email,
-      createdAt: DateTime.now().toIso8601String(),
-      updatedAt: DateTime.now().toIso8601String(),
-    );
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ChatPage(
-          group: mockGroup,
-          userEmail: widget.user.email,
-        ),
-      ),
-    );
-  }
 
   void _navigateToGroupChat(BuildContext context, Group group) {
     Navigator.push(

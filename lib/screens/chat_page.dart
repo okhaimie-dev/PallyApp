@@ -52,7 +52,7 @@ class _ChatPageState extends State<ChatPage> {
     // Join the group
     await _wsService.joinGroup(widget.group.id);
 
-    // Listen for new messages
+    // Listen for new messages (only set up once)
     _wsService.messageStream.listen((data) {
       if (data['groupId'] == widget.group.id) {
         setState(() {

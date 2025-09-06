@@ -44,10 +44,11 @@ class WebSocketService {
           .enableAutoConnect()
           .build());
 
-      _setupEventHandlers();
-
-      // Wait for connection
+      // Wait for connection first
       await _waitForConnection();
+
+      // Setup event handlers after connection is established
+      _setupEventHandlers();
 
       // Authenticate user
       _socket?.emit('authenticate', {'userEmail': userEmail});
@@ -66,6 +67,7 @@ class WebSocketService {
 
     final completer = Completer<void>();
     
+    // Set up connection event handlers
     _socket!.onConnect((_) {
       print('✅ WebSocket connection established');
       completer.complete();
@@ -90,19 +92,9 @@ class WebSocketService {
   void _setupEventHandlers() {
     if (_socket == null) return;
 
-    // Connection events
-    _socket!.onConnect((_) {
-      print('🔌 WebSocket connected');
-      _isConnected = true;
-    });
-
+    // Disconnect event
     _socket!.onDisconnect((_) {
       print('🔌 WebSocket disconnected');
-      _isConnected = false;
-    });
-
-    _socket!.onConnectError((error) {
-      print('❌ WebSocket connection error: $error');
       _isConnected = false;
     });
 
