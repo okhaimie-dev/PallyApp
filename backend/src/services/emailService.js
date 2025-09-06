@@ -160,7 +160,7 @@ class EmailService {
             <p>If you didn't request this code, please ignore this email.</p>
             
             <div class="footer">
-                <p>This email was sent by Pally Wallet</p>
+                <p>This email was sent by Pally App</p>
                 <p>© 2024 Pally. All rights reserved.</p>
             </div>
         </div>
@@ -186,7 +186,7 @@ Security Notice:
 
 If you didn't request this code, please ignore this email.
 
-This email was sent by Pally Wallet
+This email was sent by Pally App
 © 2024 Pally. All rights reserved.
     `;
   }

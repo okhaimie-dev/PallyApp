@@ -122,8 +122,7 @@ class _SignInPageState extends State<SignInPage> with TickerProviderStateMixin {
               context,
               MaterialPageRoute(
                 builder: (context) => HomePage(
-                  userEmail: googleUser.email,
-                  walletData: walletData,
+                  user: googleUser,
                 ),
               ),
             );
