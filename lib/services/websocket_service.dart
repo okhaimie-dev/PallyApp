@@ -375,7 +375,7 @@ class WebSocketService {
       
       // Show notification
       await _notificationService.showMessageNotification(
-        title: '$senderName in $groupName',
+        title: '$senderName sent a message on $groupName',
         body: content ?? 'New message',
         groupName: groupName,
         groupId: groupId ?? 0,

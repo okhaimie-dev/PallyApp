@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/signin_page.dart';
 import 'screens/home_page.dart';
+import 'screens/chat_page.dart';
+import 'services/notification_service.dart';
+import 'services/group_service.dart';
+
+// Global navigator key for navigation from anywhere in the app
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
   runApp(const PallyApp());
@@ -11,7 +18,14 @@ class PallyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Set up notification callback
+    final notificationService = NotificationService();
+    notificationService.onNotificationTapped = (groupId) {
+      _navigateToGroupChat(groupId);
+    };
+
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'Pally',
       theme: ThemeData(
         brightness: Brightness.dark,
@@ -48,6 +62,36 @@ class PallyApp extends StatelessWidget {
         },
       },
     );
+  }
+
+  /// Navigate to group chat when notification is tapped
+  void _navigateToGroupChat(int groupId) async {
+    try {
+      // Get user email from shared preferences
+      final prefs = await SharedPreferences.getInstance();
+      final userEmail = prefs.getString('user_email');
+      
+      if (userEmail == null) {
+        print('❌ No user email found in session');
+        return;
+      }
+
+      // Get the group details
+      final group = await GroupService.getGroupById(groupId, userEmail);
+      if (group != null) {
+        // Navigate to the group chat
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (context) => ChatPage(
+              group: group,
+              userEmail: userEmail,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      print('❌ Error navigating to group chat: $e');
+    }
   }
 }
 

@@ -8,6 +8,9 @@ class NotificationService {
 
   final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
+  
+  // Callback for notification tap
+  Function(int groupId)? onNotificationTapped;
 
   /// Initialize the notification service
   Future<void> initialize() async {
@@ -98,8 +101,17 @@ class NotificationService {
   /// Handle notification tap
   void _onNotificationTapped(NotificationResponse response) {
     print('📱 Notification tapped: ${response.payload}');
-    // TODO: Navigate to the specific group chat
-    // This will be handled by the main app when we integrate it
+    
+    // Extract group ID from payload
+    if (response.payload != null && response.payload!.startsWith('group_')) {
+      final groupIdStr = response.payload!.substring(6); // Remove 'group_' prefix
+      final groupId = int.tryParse(groupIdStr);
+      
+      if (groupId != null && onNotificationTapped != null) {
+        print('📱 Navigating to group: $groupId');
+        onNotificationTapped!(groupId);
+      }
+    }
   }
 
   /// Cancel all notifications
