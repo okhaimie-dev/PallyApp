@@ -63,6 +63,13 @@ export class WebSocketService {
         
         // Join user to their personal room for notifications
         socket.join(`user:${data.userEmail}`);
+        
+        // Send authentication confirmation back to client
+        socket.emit('authenticated', { 
+          userEmail: data.userEmail, 
+          socketId: socket.id,
+          message: 'Authentication successful' 
+        });
       });
 
       // Handle joining a group chat
@@ -74,14 +81,26 @@ export class WebSocketService {
             return;
           }
 
-          // Verify user is member of the group (skip for global groups)
+          // Verify user is member of the group (skip for public groups)
           const group = this.dbService.getGroupById(data.groupId);
-          const isGlobalGroup = group && !group.isPrivate;
-          const isMember = this.dbService.isGroupMember(data.groupId, data.userEmail);
           
-          if (!isGlobalGroup && !isMember) {
-            socket.emit('error', { message: 'You are not a member of this group' });
+          if (!group) {
+            socket.emit('error', { message: 'Group not found' });
             return;
+          }
+          
+          // For public groups (isPrivate = false), allow anyone to join
+          if (!group.isPrivate) {
+            console.log(`✅ Public group ${data.groupId} (${group.name}) - allowing join from ${data.userEmail}`);
+          } else {
+            // For private groups, check membership
+            const isMember = this.dbService.isGroupMember(data.groupId, data.userEmail);
+            if (!isMember) {
+              console.log(`❌ Private group ${data.groupId} (${group.name}) - user ${data.userEmail} is not a member`);
+              socket.emit('error', { message: 'You are not a member of this group' });
+              return;
+            }
+            console.log(`✅ Private group ${data.groupId} (${group.name}) - user ${data.userEmail} is a member`);
           }
 
           // Leave previous group room if any
@@ -145,14 +164,26 @@ export class WebSocketService {
             return;
           }
 
-          // Verify user is member of the group (skip for global groups)
+          // Verify user is member of the group (skip for public groups)
           const group = this.dbService.getGroupById(data.groupId);
-          const isGlobalGroup = group && !group.isPrivate;
-          const isMember = this.dbService.isGroupMember(data.groupId, data.senderEmail);
           
-          if (!isGlobalGroup && !isMember) {
-            socket.emit('error', { message: 'You are not a member of this group' });
+          if (!group) {
+            socket.emit('error', { message: 'Group not found' });
             return;
+          }
+          
+          // For public groups (isPrivate = false), allow anyone to send messages
+          if (!group.isPrivate) {
+            console.log(`✅ Public group ${data.groupId} (${group.name}) - allowing message from ${data.senderEmail}`);
+          } else {
+            // For private groups, check membership
+            const isMember = this.dbService.isGroupMember(data.groupId, data.senderEmail);
+            if (!isMember) {
+              console.log(`❌ Private group ${data.groupId} (${group.name}) - user ${data.senderEmail} is not a member`);
+              socket.emit('error', { message: 'You are not a member of this group' });
+              return;
+            }
+            console.log(`✅ Private group ${data.groupId} (${group.name}) - user ${data.senderEmail} is a member`);
           }
 
           // Save message to database

@@ -31,6 +31,7 @@ class WebSocketService {
   /// Connect to WebSocket server
   Future<void> connect(String userEmail) async {
     if (_isConnected && _userEmail == userEmail) {
+      print('🔌 WebSocket already connected for user: $userEmail');
       return; // Already connected with same user
     }
 
@@ -39,9 +40,12 @@ class WebSocketService {
     _userEmail = userEmail;
 
     try {
+      print('🔌 Attempting to connect to WebSocket server: $_baseUrl');
+      
       _socket = IO.io(_baseUrl, IO.OptionBuilder()
           .setTransports(['websocket'])
           .enableAutoConnect()
+          .setTimeout(10000) // 10 second timeout
           .build());
 
       // Wait for connection first
@@ -50,42 +54,86 @@ class WebSocketService {
       // Setup event handlers after connection is established
       _setupEventHandlers();
 
-      // Authenticate user
-      _socket?.emit('authenticate', {'userEmail': userEmail});
+      // Authenticate user and wait for confirmation
+      await _authenticateUser(userEmail);
 
       _isConnected = true;
-      print('🔌 WebSocket connected for user: $userEmail');
+      print('🔌 WebSocket connected and authenticated for user: $userEmail');
     } catch (e) {
       print('❌ WebSocket connection failed: $e');
       _isConnected = false;
+      _socket = null;
+      throw Exception('Failed to connect to WebSocket: $e');
     }
   }
 
   /// Wait for socket connection
   Future<void> _waitForConnection() async {
-    if (_socket == null) return;
+    if (_socket == null) {
+      throw Exception('Socket is null');
+    }
 
     final completer = Completer<void>();
     
     // Set up connection event handlers
     _socket!.onConnect((_) {
       print('✅ WebSocket connection established');
-      completer.complete();
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
     });
 
     _socket!.onConnectError((error) {
       print('❌ WebSocket connection error: $error');
-      completer.completeError(error);
+      if (!completer.isCompleted) {
+        completer.completeError(error);
+      }
     });
 
     // Timeout after 10 seconds
     Timer(const Duration(seconds: 10), () {
       if (!completer.isCompleted) {
-        completer.completeError('Connection timeout');
+        completer.completeError('Connection timeout after 10 seconds');
       }
     });
 
     return completer.future;
+  }
+
+  /// Authenticate user and wait for confirmation
+  Future<void> _authenticateUser(String userEmail) async {
+    if (_socket == null) {
+      throw Exception('Socket is null during authentication');
+    }
+
+    final completer = Completer<void>();
+
+    // Listen for authentication confirmation
+    _socket!.once('authenticated', (data) {
+      print('🔐 User authenticated: $data');
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
+    });
+
+    // Listen for authentication error
+    _socket!.once('error', (data) {
+      print('❌ Authentication error: $data');
+      if (!completer.isCompleted) {
+        completer.completeError(data);
+      }
+    });
+
+    // Send authentication request
+    print('🔐 Sending authentication request for: $userEmail');
+    _socket!.emit('authenticate', {'userEmail': userEmail});
+
+    // Wait for authentication confirmation with timeout
+    try {
+      await completer.future.timeout(const Duration(seconds: 5));
+    } catch (e) {
+      throw Exception('Authentication timeout: $e');
+    }
   }
 
   /// Setup event handlers
@@ -159,16 +207,38 @@ class WebSocketService {
   Future<void> joinGroup(int groupId) async {
     if (_socket == null || !_isConnected || _userEmail == null) {
       print('❌ Cannot join group: WebSocket not connected or user not authenticated');
-      return;
+      throw Exception('WebSocket not connected or user not authenticated');
     }
+
+    final completer = Completer<void>();
+    
+    // Listen for join confirmation
+    _socket!.once('joined_group', (data) {
+      print('✅ Successfully joined group: $data');
+      _currentGroupId = groupId;
+      completer.complete();
+    });
+
+    // Listen for join error
+    _socket!.once('error', (data) {
+      print('❌ Error joining group: $data');
+      completer.completeError(data);
+    });
 
     _socket!.emit('join_group', {
       'groupId': groupId,
       'userEmail': _userEmail,
     });
 
-    _currentGroupId = groupId;
     print('👥 Joining group: $groupId');
+    
+    // Wait for join confirmation with timeout
+    try {
+      await completer.future.timeout(const Duration(seconds: 5));
+    } catch (e) {
+      print('❌ Timeout joining group: $e');
+      throw e;
+    }
   }
 
   /// Leave current group
@@ -193,8 +263,22 @@ class WebSocketService {
   }) async {
     if (_socket == null || !_isConnected || _userEmail == null) {
       print('❌ Cannot send message: WebSocket not connected or user not authenticated');
-      return;
+      throw Exception('WebSocket not connected or user not authenticated');
     }
+
+    final completer = Completer<void>();
+    
+    // Listen for message sent confirmation
+    _socket!.once('message_sent', (data) {
+      print('✅ Message sent successfully: $data');
+      completer.complete();
+    });
+
+    // Listen for message error
+    _socket!.once('error', (data) {
+      print('❌ Error sending message: $data');
+      completer.completeError(data);
+    });
 
     _socket!.emit('send_message', {
       'groupId': groupId,
@@ -204,6 +288,14 @@ class WebSocketService {
     });
 
     print('💬 Sending message to group $groupId: $content');
+    
+    // Wait for confirmation with timeout
+    try {
+      await completer.future.timeout(const Duration(seconds: 5));
+    } catch (e) {
+      print('❌ Timeout sending message: $e');
+      throw e;
+    }
   }
 
   /// Send typing start indicator

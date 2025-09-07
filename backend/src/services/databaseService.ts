@@ -320,6 +320,13 @@ export class DatabaseService {
     const stmt = this.db.prepare("SELECT * FROM groups WHERE id = ?");
     const row = stmt.get(groupId) as any;
     
+    console.log(`🔍 DatabaseService.getGroupById(${groupId}):`, {
+      rowExists: !!row,
+      isPrivate: row?.is_private,
+      isPrivateType: typeof row?.is_private,
+      booleanIsPrivate: Boolean(row?.is_private)
+    });
+    
     if (!row) return null;
 
     return {

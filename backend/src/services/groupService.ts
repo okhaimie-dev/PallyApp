@@ -349,8 +349,8 @@ export class GroupService {
         };
       }
 
-      // Check if user is member
-      if (!this.dbService.isGroupMember(groupId, senderEmail)) {
+      // Check if user is member (skip for public groups)
+      if (group.isPrivate && !this.dbService.isGroupMember(groupId, senderEmail)) {
         return {
           success: false,
           error: "You are not a member of this group"

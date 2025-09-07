@@ -44,35 +44,67 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   void _setupWebSocket() async {
-    // Connect to WebSocket if not already connected
-    if (!_wsService.isConnected) {
-      await _wsService.connect(widget.userEmail);
+    try {
+      print('🔌 Setting up WebSocket for group: ${widget.group.id}');
+      
+      // Connect to WebSocket if not already connected
+      if (!_wsService.isConnected) {
+        print('🔌 Connecting to WebSocket...');
+        await _wsService.connect(widget.userEmail);
+      } else {
+        print('🔌 WebSocket already connected');
+      }
+
+      // Join the group
+      print('👥 Joining group: ${widget.group.id}');
+      await _wsService.joinGroup(widget.group.id);
+
+      // Listen for new messages (only set up once)
+      _wsService.messageStream.listen((data) {
+        print('💬 Received message: $data');
+        if (data['groupId'] == widget.group.id) {
+          setState(() {
+            _messages.add(ChatMessage(
+              text: data['content'],
+              isMe: data['senderEmail'] == widget.userEmail,
+              senderName: data['senderEmail'] == widget.userEmail ? "You" : _getDisplayName(data['senderEmail']),
+              timestamp: DateTime.parse(data['createdAt']),
+            ));
+          });
+        }
+      });
+
+      // Listen for typing indicators
+      _wsService.typingStream.listen((data) {
+        if (data['groupId'] == widget.group.id && data['userEmail'] != widget.userEmail) {
+          // Handle typing indicators if needed
+          print('User ${data['userEmail']} is ${data['isTyping'] ? 'typing' : 'not typing'}');
+        }
+      });
+      
+      print('✅ WebSocket setup completed successfully');
+    } catch (e) {
+      print('❌ Error setting up WebSocket: $e');
+      // Show error message to user
+      if (mounted) {
+        String errorMessage = 'Failed to connect to chat';
+        if (e.toString().contains('timeout')) {
+          errorMessage = 'Connection timeout. Please check your internet connection and try again.';
+        } else if (e.toString().contains('not authenticated')) {
+          errorMessage = 'Authentication failed. Please try again.';
+        } else {
+          errorMessage = 'Failed to connect to chat: $e';
+        }
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: const Color(0xFFEF4444),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     }
-
-    // Join the group
-    await _wsService.joinGroup(widget.group.id);
-
-    // Listen for new messages (only set up once)
-    _wsService.messageStream.listen((data) {
-      if (data['groupId'] == widget.group.id) {
-        setState(() {
-          _messages.add(ChatMessage(
-            text: data['content'],
-            isMe: data['senderEmail'] == widget.userEmail,
-            senderName: data['senderEmail'] == widget.userEmail ? "You" : _getDisplayName(data['senderEmail']),
-            timestamp: DateTime.parse(data['createdAt']),
-          ));
-        });
-      }
-    });
-
-    // Listen for typing indicators
-    _wsService.typingStream.listen((data) {
-      if (data['groupId'] == widget.group.id && data['userEmail'] != widget.userEmail) {
-        // Handle typing indicators if needed
-        print('User ${data['userEmail']} is ${data['isTyping'] ? 'typing' : 'not typing'}');
-      }
-    });
   }
 
   void _loadMessages() async {
@@ -149,7 +181,7 @@ class _ChatPageState extends State<ChatPage> {
     });
 
     try {
-      // Send message via WebSocket for real-time delivery
+      // Try WebSocket for real-time delivery
       await _wsService.sendMessage(
         groupId: widget.group.id,
         content: messageText,
@@ -162,14 +194,51 @@ class _ChatPageState extends State<ChatPage> {
       // The message will be added to the list via WebSocket stream
       // No need to add it manually here
     } catch (e) {
-      print('Error sending message: $e');
+      print('❌ WebSocket failed: $e');
+      
+      // Try to reconnect and retry once
+      if (e.toString().contains('not connected') || e.toString().contains('not authenticated')) {
+        try {
+          print('🔄 Attempting to reconnect WebSocket...');
+          await _wsService.connect(widget.userEmail);
+          await _wsService.joinGroup(widget.group.id);
+          
+          // Retry sending the message
+          await _wsService.sendMessage(
+            groupId: widget.group.id,
+            content: messageText,
+          );
+          
+          // Stop typing indicator
+          _wsService.stopTyping(widget.group.id);
+          _isTyping = false;
+          return; // Success, exit early
+        } catch (retryError) {
+          print('❌ WebSocket retry also failed: $retryError');
+        }
+      }
+      
       // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to send message'),
-          backgroundColor: Color(0xFFEF4444),
-        ),
-      );
+      if (mounted) {
+        String errorMessage = 'Failed to send message';
+        if (e.toString().contains('timeout')) {
+          errorMessage = 'Message sending timeout. Please try again.';
+        } else if (e.toString().contains('not authenticated')) {
+          errorMessage = 'Authentication expired. Please refresh the chat.';
+        } else if (e.toString().contains('not a member')) {
+          errorMessage = 'You are not a member of this group.';
+        } else {
+          errorMessage = 'Failed to send message: $e';
+        }
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: const Color(0xFFEF4444),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     } finally {
       setState(() {
         _isSendingMessage = false;
