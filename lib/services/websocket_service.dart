@@ -201,6 +201,11 @@ class WebSocketService {
     });
 
     // Tip events
+    _socket!.on('tip_notification', (data) {
+      print('💰 Tip notification received: $data');
+      _handleTipNotification(data, 'received');
+    });
+
     _socket!.on('tip_received', (data) {
       print('💰 Tip received: $data');
       _handleTipNotification(data, 'received');
@@ -480,26 +485,27 @@ class WebSocketService {
     try {
       final tipData = Map<String, dynamic>.from(data);
       final amount = tipData['amount'] as double?;
-      final fromUser = tipData['fromUser'] as String?;
-      final toUser = tipData['toUser'] as String?;
+      final senderEmail = tipData['senderEmail'] as String?;
+      final recipientEmail = tipData['recipientEmail'] as String?;
       final message = tipData['message'] as String?;
+      final token = tipData['token'] as String?;
       
       // Only show notifications for the current user
-      if (toUser != _userEmail && fromUser != _userEmail) return;
+      if (recipientEmail != _userEmail && senderEmail != _userEmail) return;
       
       String title;
       String body;
       
       if (type == 'received') {
-        final fromName = _getDisplayName(fromUser ?? '');
+        final senderName = _getDisplayName(senderEmail ?? '');
         title = '💰 Tip Received!';
-        body = '$fromName sent you \$${amount?.toStringAsFixed(2) ?? '0.00'}';
-        if (message != null && message.isNotEmpty) {
+        body = '$senderName sent you \$${amount?.toStringAsFixed(2) ?? '0.00'} $token';
+        if (message != null && message.isNotEmpty && message != 'Great job!') {
           body += ': "$message"';
         }
       } else if (type == 'withdrawn') {
         title = '💸 Tip Withdrawn';
-        body = 'You withdrew \$${amount?.toStringAsFixed(2) ?? '0.00'}';
+        body = 'You withdrew \$${amount?.toStringAsFixed(2) ?? '0.00'} $token';
       } else {
         return;
       }
@@ -510,7 +516,7 @@ class WebSocketService {
         body: body,
         groupName: 'Tip',
         groupId: 0, // Use 0 for tip notifications
-        senderName: type == 'received' ? _getDisplayName(fromUser ?? '') : 'You',
+        senderName: type == 'received' ? _getDisplayName(senderEmail ?? '') : 'You',
       );
     } catch (e) {
       print('❌ Error handling tip notification: $e');

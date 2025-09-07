@@ -338,4 +338,16 @@ export class WebSocketService {
     console.log(`📡 Broadcasting message to all clients:`, messageData);
     this.io.emit('new_message', messageData);
   }
+
+  // Send tip notification to specific user
+  public sendTipNotification(recipientEmail: string, tipData: any): void {
+    console.log(`💸 Sending tip notification to ${recipientEmail}:`, tipData);
+    this.io.to(`user:${recipientEmail}`).emit('tip_notification', tipData);
+  }
+
+  // Send notification to specific user
+  public sendNotification(userEmail: string, notificationData: any): void {
+    console.log(`📱 Sending notification to ${userEmail}:`, notificationData);
+    this.io.to(`user:${userEmail}`).emit('notification', notificationData);
+  }
 }

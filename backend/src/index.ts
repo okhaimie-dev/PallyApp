@@ -11,6 +11,8 @@ import { WebSocketService } from "./services/websocketService";
 import { BalanceService } from "./services/balanceService";
 import { TransactionService } from "./services/transactionService";
 import { AccountDeploymentService } from "./services/accountDeploymentService";
+import { TokenTransferService } from "./services/tokenTransferService";
+import { DatabaseService } from "./services/databaseService";
 import emailService from "./services/emailService";
 import {
   generalLimiter,
@@ -252,6 +254,141 @@ app.get("/wallet/:email/tips", async (req, res) => {
 
   } catch (err: any) {
     console.error("❌ Error retrieving tip transactions:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Send tip endpoint
+app.post("/send-tip", async (req, res) => {
+  try {
+    const { senderPrivateKey, selectedToken, amount, recipientEmail, message } = req.body;
+
+    // Validate required fields
+    if (!senderPrivateKey || !selectedToken || !amount || !recipientEmail) {
+      res.status(400).json({ 
+        error: "Missing required fields: senderPrivateKey, selectedToken, amount, recipientEmail" 
+      });
+      return;
+    }
+
+    // Validate token type
+    if (!['USDC', 'STRK'].includes(selectedToken)) {
+      res.status(400).json({ 
+        error: "Invalid token. Must be 'USDC' or 'STRK'" 
+      });
+      return;
+    }
+
+    // Validate amount
+    const tipAmount = parseFloat(amount);
+    if (isNaN(tipAmount) || tipAmount <= 0) {
+      res.status(400).json({ 
+        error: "Amount must be a positive number" 
+      });
+      return;
+    }
+
+    // Validate recipient email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(recipientEmail)) {
+      res.status(400).json({ 
+        error: "Invalid recipient email format" 
+      });
+      return;
+    }
+
+    console.log(`💸 Processing tip: ${tipAmount} ${selectedToken} from sender to ${recipientEmail}`);
+
+    // Get services
+    const tokenTransferService = TokenTransferService.getInstance();
+    const transactionService = TransactionService.getInstance();
+    const wsService = WebSocketService.getInstance();
+
+    // Validate recipient exists in database
+    if (!tokenTransferService.validateRecipientEmail(recipientEmail)) {
+      res.status(404).json({ 
+        error: "Recipient email not found in our system" 
+      });
+      return;
+    }
+
+    // Get recipient wallet address
+    const recipientAddress = tokenTransferService.getWalletAddressByEmail(recipientEmail);
+    if (!recipientAddress) {
+      res.status(404).json({ 
+        error: "Recipient wallet address not found" 
+      });
+      return;
+    }
+
+    console.log(`📍 Recipient address: ${recipientAddress}`);
+
+    // Execute token transfer
+    const transferResult = await tokenTransferService.transferTokens({
+      senderPrivateKey,
+      recipientAddress,
+      amount: tipAmount,
+      token: selectedToken as 'USDC' | 'STRK',
+      message: message || 'Great job!'
+    });
+
+    if (!transferResult.success) {
+      res.status(500).json({ 
+        error: transferResult.error || "Token transfer failed" 
+      });
+      return;
+    }
+
+    // Get sender email from private key
+    const dbService = DatabaseService.getInstance();
+    const senderEmail = dbService.getEmailByPrivateKey(senderPrivateKey);
+    
+    if (!senderEmail) {
+      res.status(400).json({ 
+        error: "Sender private key not found in our system" 
+      });
+      return;
+    }
+
+    // Create tip transaction record
+    const tipTransactionId = await transactionService.createTipTransaction(
+      senderEmail,
+      recipientEmail,
+      tipAmount,
+      selectedToken as 'USDC' | 'STRK',
+      message || 'Great job!',
+      transferResult.transactionHash
+    );
+
+    console.log(`✅ Tip transaction recorded with ID: ${tipTransactionId}`);
+
+    // Send websocket notification to recipient
+    const notificationData = {
+      type: 'tip_received',
+      senderEmail: senderEmail,
+      recipientEmail: recipientEmail,
+      amount: tipAmount,
+      token: selectedToken,
+      message: message || 'Great job!',
+      transactionHash: transferResult.transactionHash,
+      timestamp: new Date().toISOString()
+    };
+
+    // Send notification to recipient's personal room
+    wsService.sendTipNotification(recipientEmail, notificationData);
+
+    console.log(`📡 Tip notification sent to ${recipientEmail}`);
+
+    res.json({
+      success: true,
+      message: `Successfully sent ${tipAmount} ${selectedToken} tip`,
+      transactionHash: transferResult.transactionHash,
+      tipTransactionId: tipTransactionId,
+      recipientAddress: recipientAddress
+    });
+
+  } catch (err: any) {
+    console.error("❌ Error sending tip:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -672,9 +809,12 @@ httpServer.listen(PORT, '0.0.0.0', () => {
   console.log('  POST /generate-otp - Generate OTP');
   console.log('  POST /wallet - Create/get wallet with OTP');
   console.log('  GET  /wallet/:email - Get wallet info (without private key)');
+  console.log('  GET  /wallet/:email/balances - Get wallet balances');
+  console.log('  GET  /wallet/:email/tips - Get tip transactions');
   console.log('  GET  /wallet/:email/deployment-status - Check account deployment status');
   console.log('  POST /wallet/:email/deploy - Deploy account to Starknet');
   console.log('  GET  /wallet/deployment-cost - Get deployment cost estimate');
+  console.log('  POST /send-tip - Send tip to recipient');
   console.log('  GET  /admin/wallet-stats - Get wallet statistics');
   console.log('  POST /groups - Create new group');
   console.log('  GET  /groups/user/:userEmail - Get user groups');

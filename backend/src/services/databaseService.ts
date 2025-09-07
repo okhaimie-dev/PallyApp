@@ -254,6 +254,56 @@ export class DatabaseService {
   }
 
   /**
+   * Get wallet by account address
+   */
+  public getWalletByAddress(accountAddress: string): WalletRecord | null {
+    const stmt = this.db.prepare("SELECT * FROM wallets WHERE account_address = ?");
+    const row = stmt.get(accountAddress) as any;
+    
+    if (!row) {
+      return null;
+    }
+
+    return {
+      id: row.id,
+      email: row.email,
+      encryptedPrivateKey: row.encrypted_private_key,
+      publicKey: row.public_key,
+      accountAddress: row.account_address,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+  }
+
+  /**
+   * Get email by private key (for tip sender identification)
+   */
+  public getEmailByPrivateKey(privateKey: string): string | null {
+    try {
+      // Get all wallets and check their decrypted private keys
+      const stmt = this.db.prepare("SELECT * FROM wallets");
+      const rows = stmt.all() as any[];
+      
+      for (const row of rows) {
+        try {
+          const decryptedKey = this.decryptPrivateKey(row.encrypted_private_key);
+          if (decryptedKey === privateKey) {
+            return row.email;
+          }
+        } catch (error) {
+          // Skip wallets with decryption errors
+          continue;
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("Error getting email by private key:", error);
+      return null;
+    }
+  }
+
+  /**
    * Check if wallet exists for email
    */
   public walletExists(email: string): boolean {

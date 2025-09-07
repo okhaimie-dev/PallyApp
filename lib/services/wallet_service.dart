@@ -316,6 +316,61 @@ class WalletService {
       return null;
     }
   }
+
+  /// Send tip to recipient
+  static Future<TipSendResult?> sendTip({
+    required String senderPrivateKey,
+    required String selectedToken,
+    required double amount,
+    required String recipientEmail,
+    String? message,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/send-tip'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'senderPrivateKey': senderPrivateKey,
+          'selectedToken': selectedToken,
+          'amount': amount,
+          'recipientEmail': recipientEmail,
+          'message': message ?? 'Great job!',
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          return TipSendResult(
+            success: true,
+            message: data['message'],
+            transactionHash: data['transactionHash'],
+            tipTransactionId: data['tipTransactionId'],
+            recipientAddress: data['recipientAddress'],
+          );
+        }
+      }
+      
+      // Handle error response
+      final errorData = jsonDecode(response.body);
+      return TipSendResult(
+        success: false,
+        message: errorData['error'] ?? 'Failed to send tip',
+        transactionHash: null,
+        tipTransactionId: null,
+        recipientAddress: null,
+      );
+    } catch (e) {
+      print('❌ Error sending tip: $e');
+      return TipSendResult(
+        success: false,
+        message: 'Network error: $e',
+        transactionHash: null,
+        tipTransactionId: null,
+        recipientAddress: null,
+      );
+    }
+  }
 }
 
 /// Tip transaction model
@@ -530,4 +585,21 @@ class DeploymentCost {
       description: json['description'] ?? 'Estimated cost for account deployment',
     );
   }
+}
+
+/// Tip send result model
+class TipSendResult {
+  final bool success;
+  final String message;
+  final String? transactionHash;
+  final String? tipTransactionId;
+  final String? recipientAddress;
+
+  TipSendResult({
+    required this.success,
+    required this.message,
+    this.transactionHash,
+    this.tipTransactionId,
+    this.recipientAddress,
+  });
 }

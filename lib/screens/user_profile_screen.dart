@@ -784,14 +784,69 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     );
   }
 
-  void _sendTip(double amount, String message) {
-    // In a real app, this would send the tip to your backend
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Tip of \$${amount.toStringAsFixed(2)} sent to ${widget.userName}!'),
-        backgroundColor: const Color(0xFF10B981),
-      ),
-    );
+  void _sendTip(double amount, String message) async {
+    try {
+      // Get sender's private key
+      final senderPrivateKey = await WalletService.getPrivateKey();
+      if (senderPrivateKey == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to get wallet information'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // Send tip via backend
+      final result = await WalletService.sendTip(
+        senderPrivateKey: senderPrivateKey,
+        selectedToken: 'USDC', // Default to USDC for now
+        amount: amount,
+        recipientEmail: widget.userEmail,
+        message: message,
+      );
+
+      // Hide loading indicator
+      Navigator.pop(context);
+
+      if (result != null && result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Tip of \$${amount.toStringAsFixed(2)} sent to ${widget.userName} successfully!'),
+            backgroundColor: const Color(0xFF10B981),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result?.message ?? 'Failed to send tip'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      // Hide loading indicator if still showing
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error sending tip: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _navigateToDeposit(BuildContext context) {
