@@ -101,16 +101,25 @@ class NotificationService {
   /// Handle notification tap
   void _onNotificationTapped(NotificationResponse response) {
     print('📱 Notification tapped: ${response.payload}');
+    print('📱 Notification action: ${response.actionId}');
+    print('📱 Notification input: ${response.input}');
     
     // Extract group ID from payload
     if (response.payload != null && response.payload!.startsWith('group_')) {
       final groupIdStr = response.payload!.substring(6); // Remove 'group_' prefix
       final groupId = int.tryParse(groupIdStr);
       
+      print('📱 Extracted group ID: $groupId');
+      print('📱 Callback available: ${onNotificationTapped != null}');
+      
       if (groupId != null && onNotificationTapped != null) {
-        print('📱 Navigating to group: $groupId');
+        print('📱 Calling navigation callback for group: $groupId');
         onNotificationTapped!(groupId);
+      } else {
+        print('❌ Cannot navigate: groupId=$groupId, callback=${onNotificationTapped != null}');
       }
+    } else {
+      print('❌ Invalid payload format: ${response.payload}');
     }
   }
 
