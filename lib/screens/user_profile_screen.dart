@@ -4,6 +4,7 @@ import 'deposit_screen.dart';
 import 'withdraw_screen.dart';
 import 'notification_settings_screen.dart';
 import '../services/wallet_service.dart';
+import '../services/websocket_service.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final String userName;
@@ -36,6 +37,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     _tabController = TabController(length: 2, vsync: this);
     _loadTipData();
     _loadWalletData();
+    // Clear current group ID when on user profile screen so notifications can show
+    final wsService = WebSocketService.getInstance();
+    wsService.clearCurrentGroupId();
   }
 
   @override

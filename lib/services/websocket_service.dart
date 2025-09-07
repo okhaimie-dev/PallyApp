@@ -356,8 +356,14 @@ class WebSocketService {
       // Don't show notification for own messages
       if (senderEmail == _userEmail) return;
       
+      // Debug logging
+      print('📱 Notification check - Group ID: $groupId, Current Group ID: $_currentGroupId');
+      
       // Don't show notification if user is currently in this group
-      if (groupId == _currentGroupId) return;
+      if (groupId == _currentGroupId) {
+        print('📱 Skipping notification - user is currently in group $groupId');
+        return;
+      }
       
       // Check if user should receive notifications for this group
       final shouldNotify = await _shouldNotifyForGroup(groupId);
@@ -548,6 +554,18 @@ class WebSocketService {
   void setCurrentGroupId(int? groupId) {
     _currentGroupId = groupId;
     print('📍 Current group set to: $groupId');
+  }
+
+  /// Clear current group ID (for notification purposes)
+  void clearCurrentGroupId() {
+    _currentGroupId = null;
+    print('📍 Current group cleared - notifications will show');
+  }
+
+  /// Force clear current group ID (for debugging)
+  void forceClearCurrentGroupId() {
+    _currentGroupId = null;
+    print('📍 Current group FORCE cleared - notifications will show');
   }
 
   /// Get current user email

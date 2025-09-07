@@ -44,6 +44,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     if (!wsService.isConnected) {
       await wsService.connect(widget.user.email);
     }
+    // Clear current group ID when on home screen so notifications can show
+    wsService.clearCurrentGroupId();
   }
 
   @override

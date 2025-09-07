@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'chat_page.dart';
 import '../services/group_service.dart';
+import '../services/websocket_service.dart';
 
 class CategoriesScreen extends StatefulWidget {
   final String categoryName;
@@ -28,6 +29,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   void initState() {
     super.initState();
     _loadGroups();
+    // Clear current group ID when on categories screen so notifications can show
+    final wsService = WebSocketService.getInstance();
+    wsService.clearCurrentGroupId();
   }
 
   Future<void> _loadGroups() async {

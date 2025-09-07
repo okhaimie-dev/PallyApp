@@ -63,16 +63,19 @@ class NotificationService {
       'message_channel',
       'Message Notifications',
       channelDescription: 'Notifications for new messages',
-      importance: Importance.high,
+      importance: Importance.max,
       priority: Priority.high,
       showWhen: true,
       icon: '@mipmap/ic_launcher',
+      fullScreenIntent: true, // Show even when app is in foreground
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
+      interruptionLevel: InterruptionLevel.critical,
+      presentBanner: true, // Show banner even when app is in foreground
     );
 
     const NotificationDetails details = NotificationDetails(
