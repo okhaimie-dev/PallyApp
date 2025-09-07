@@ -22,11 +22,19 @@ class _DepositScreenState extends State<DepositScreen> {
   // Balance state
   String _totalBalance = '\$0.00';
   bool _isLoadingBalance = true;
+  
+  // Deployment state
+  bool _isDeployed = false;
+  bool _isLoadingDeployment = true;
+  bool _isDeploying = false;
+  String _deploymentMessage = '';
+  DeploymentRequirements? _deploymentRequirements;
 
   @override
   void initState() {
     super.initState();
     _loadBalance();
+    _loadDeploymentStatus();
   }
 
   @override
@@ -56,6 +64,85 @@ class _DepositScreenState extends State<DepositScreen> {
     }
   }
 
+  void _loadDeploymentStatus() async {
+    try {
+      final deploymentStatus = await WalletService.getDeploymentStatus(widget.userEmail);
+      if (mounted) {
+        setState(() {
+          _isDeployed = deploymentStatus?.isDeployed ?? false;
+          _deploymentRequirements = deploymentStatus?.requirements;
+          _isLoadingDeployment = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading deployment status: $e');
+      if (mounted) {
+        setState(() {
+          _isDeployed = false;
+          _isLoadingDeployment = false;
+        });
+      }
+    }
+  }
+
+  void _deployAccount() async {
+    if (_isDeploying) return;
+
+    setState(() {
+      _isDeploying = true;
+      _deploymentMessage = 'Deploying your account to Starknet...';
+    });
+
+    try {
+      final result = await WalletService.deployAccount(widget.userEmail);
+      
+      if (mounted) {
+        setState(() {
+          _isDeploying = false;
+        });
+
+        if (result?.success == true) {
+          setState(() {
+            _isDeployed = true;
+            _deploymentMessage = 'Account deployed successfully!';
+          });
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Account deployed successfully! You can now deposit and receive rewards.'),
+              backgroundColor: Color(0xFF10B981),
+            ),
+          );
+        } else {
+          setState(() {
+            _deploymentMessage = result?.message ?? 'Deployment failed';
+          });
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result?.message ?? 'Deployment failed'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isDeploying = false;
+          _deploymentMessage = 'Deployment failed: $e';
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Deployment failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -77,6 +164,9 @@ class _DepositScreenState extends State<DepositScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Account Deployment Section
+            if (!_isDeployed) _buildDeploymentSection(),
+            
             // Balance Card
             Container(
               width: double.infinity,
@@ -353,6 +443,213 @@ class _DepositScreenState extends State<DepositScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDeploymentSection() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.cloud_upload,
+                color: Colors.white,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Deploy Your Account',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              if (_isLoadingDeployment)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    strokeWidth: 2,
+                  ),
+                )
+              else if (_isDeployed)
+                const Icon(
+                  Icons.check_circle,
+                  color: Colors.white,
+                  size: 24,
+                ),
+            ],
+          ),
+          
+          const SizedBox(height: 12),
+          
+          const Text(
+            'Deploy your account to enable deposits and receive rewards',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+            ),
+          ),
+          
+          const SizedBox(height: 8),
+          
+          Row(
+            children: [
+              const Icon(
+                Icons.info_outline,
+                color: Colors.white70,
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Minimum amount of STRK needed: ${_deploymentRequirements?.minimumRequired ?? '0.5'}',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+          if (_deploymentRequirements != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(
+                  Icons.account_balance_wallet,
+                  color: Colors.white70,
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Current STRK balance: ${_deploymentRequirements!.currentBalance}',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          
+          const SizedBox(height: 16),
+          
+          if (_deploymentMessage.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  if (_isDeploying)
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        strokeWidth: 2,
+                      ),
+                    )
+                  else if (_isDeployed)
+                    const Icon(
+                      Icons.check_circle,
+                      color: Colors.white,
+                      size: 16,
+                    )
+                  else
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _deploymentMessage,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _isDeploying || _isLoadingDeployment || (_deploymentRequirements?.canDeploy != true)
+                  ? null
+                  : _deployAccount,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF6366F1),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: _isDeploying
+                  ? const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
+                            strokeWidth: 2,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'Deploying...',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Text(
+                      _deploymentRequirements?.canDeploy == true
+                          ? 'Deploy Account'
+                          : 'Insufficient STRK Balance',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+            ),
+          ),
+        ],
       ),
     );
   }

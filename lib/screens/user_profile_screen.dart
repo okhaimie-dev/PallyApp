@@ -602,7 +602,116 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     }
   }
 
-  void _showTipDialog(BuildContext context) {
+  void _showTipDialog(BuildContext context) async {
+    // Check deployment status first
+    final deploymentStatus = await WalletService.getDeploymentStatus(widget.userEmail);
+    
+    if (deploymentStatus?.isDeployed != true) {
+      // Show deployment dialog instead
+      _showDeploymentRequiredDialog(context);
+      return;
+    }
+    
+    // If deployed, show the tip dialog
+    _showActualTipDialog(context);
+  }
+
+  void _showDeploymentRequiredDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: Row(
+          children: [
+            const Icon(
+              Icons.cloud_upload,
+              color: Color(0xFF6366F1),
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Account Deployment Required',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'You need to deploy your account before you can send tips.',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF6366F1).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        color: Color(0xFF6366F1),
+                        size: 16,
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'Why deploy?',
+                        style: TextStyle(
+                          color: Color(0xFF6366F1),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '• Send tips to other users\n• Receive tips from others\n• Withdraw your rewards\n• Full blockchain functionality',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey[400])),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _navigateToDeployAccount(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6366F1),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Deploy Account'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showActualTipDialog(BuildContext context) {
     final TextEditingController amountController = TextEditingController();
     final TextEditingController messageController = TextEditingController();
 
@@ -695,6 +804,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
   }
 
   void _navigateToWithdraw(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => WithdrawScreen(userEmail: widget.userEmail),
+      ),
+    );
+  }
+
+  void _navigateToDeployAccount(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
