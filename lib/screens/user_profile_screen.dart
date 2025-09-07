@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'deposit_screen.dart';
 import 'withdraw_screen.dart';
+import 'notification_settings_screen.dart';
 import '../services/wallet_service.dart';
 
 class UserProfileScreen extends StatefulWidget {
@@ -864,6 +865,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
               ),
             ),
             const SizedBox(height: 20),
+            _buildOptionTile(Icons.notifications, "Notification Settings", () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NotificationSettingsScreen(),
+                ),
+              );
+            }),
             _buildOptionTile(Icons.block, "Block User", () {}),
             _buildOptionTile(Icons.report, "Report User", () {}),
             _buildOptionTile(Icons.share, "Share Profile", () {}),

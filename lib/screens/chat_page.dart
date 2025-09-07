@@ -40,6 +40,7 @@ class _ChatPageState extends State<ChatPage> {
     _messageController.dispose();
     _typingTimer?.cancel();
     _wsService.leaveGroup();
+    _wsService.setCurrentGroupId(null); // Clear current group
     super.dispose();
   }
 
@@ -58,6 +59,9 @@ class _ChatPageState extends State<ChatPage> {
       // Join the group
       print('👥 Joining group: ${widget.group.id}');
       await _wsService.joinGroup(widget.group.id);
+      
+      // Set current group for notification purposes
+      _wsService.setCurrentGroupId(widget.group.id);
 
       // Listen for new messages (only set up once)
       _wsService.messageStream.listen((data) {

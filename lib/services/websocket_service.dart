@@ -1,5 +1,8 @@
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'notification_service.dart';
 
 class WebSocketService {
   static const String _baseUrl = 'http://192.168.0.106:3000'; // Update with your backend URL
@@ -14,6 +17,7 @@ class WebSocketService {
   final StreamController<Map<String, dynamic>> _typingController = StreamController.broadcast();
   final StreamController<Map<String, dynamic>> _userActivityController = StreamController.broadcast();
   final StreamController<Map<String, dynamic>> _groupUpdateController = StreamController.broadcast();
+  final NotificationService _notificationService = NotificationService();
 
   // Getters for streams
   Stream<Map<String, dynamic>> get messageStream => _messageController.stream;
@@ -59,6 +63,9 @@ class WebSocketService {
 
       _isConnected = true;
       print('🔌 WebSocket connected and authenticated for user: $userEmail');
+      
+      // Initialize notification service
+      await _notificationService.initialize();
     } catch (e) {
       print('❌ WebSocket connection failed: $e');
       _isConnected = false;
@@ -150,6 +157,9 @@ class WebSocketService {
     _socket!.on('new_message', (data) {
       print('💬 New message received: $data');
       _messageController.add(Map<String, dynamic>.from(data));
+      
+      // Show notification if message is from another user and not in current group
+      _handleMessageNotification(data);
     });
 
     _socket!.on('message_sent', (data) {
@@ -188,6 +198,17 @@ class WebSocketService {
     _socket!.on('group_update', (data) {
       print('🔄 Group update: $data');
       _groupUpdateController.add(Map<String, dynamic>.from(data));
+    });
+
+    // Tip events
+    _socket!.on('tip_received', (data) {
+      print('💰 Tip received: $data');
+      _handleTipNotification(data, 'received');
+    });
+
+    _socket!.on('tip_withdrawn', (data) {
+      print('💸 Tip withdrawn: $data');
+      _handleTipNotification(data, 'withdrawn');
     });
 
     // Error events
@@ -271,6 +292,8 @@ class WebSocketService {
     // Listen for message sent confirmation
     _socket!.once('message_sent', (data) {
       print('✅ Message sent successfully: $data');
+      // Track that user has messaged in this group for notification purposes
+      _trackUserMessagingInGroup(groupId);
       completer.complete();
     });
 
@@ -322,6 +345,188 @@ class WebSocketService {
     });
   }
 
+  /// Handle message notification
+  void _handleMessageNotification(dynamic data) async {
+    try {
+      final messageData = Map<String, dynamic>.from(data);
+      final senderEmail = messageData['senderEmail'] as String?;
+      final groupId = messageData['groupId'] as int?;
+      final content = messageData['content'] as String?;
+      
+      // Don't show notification for own messages
+      if (senderEmail == _userEmail) return;
+      
+      // Don't show notification if user is currently in this group
+      if (groupId == _currentGroupId) return;
+      
+      // Check if user should receive notifications for this group
+      final shouldNotify = await _shouldNotifyForGroup(groupId);
+      if (!shouldNotify) return;
+      
+      // Get sender name and group name
+      final senderName = _getDisplayName(senderEmail ?? '');
+      final groupName = await _getGroupName(groupId);
+      
+      // Show notification
+      await _notificationService.showMessageNotification(
+        title: '$senderName in $groupName',
+        body: content ?? 'New message',
+        groupName: groupName,
+        groupId: groupId ?? 0,
+        senderName: senderName,
+      );
+    } catch (e) {
+      print('❌ Error handling message notification: $e');
+    }
+  }
+
+  /// Check if user should receive notifications for this group
+  Future<bool> _shouldNotifyForGroup(int? groupId) async {
+    if (groupId == null || _userEmail == null) return false;
+    
+    try {
+      // Check if user has messaged in this group before
+      final hasMessaged = await _hasUserMessagedInGroup(groupId);
+      if (hasMessaged) {
+        print('📱 User has messaged in group $groupId - showing notification');
+        return true;
+      }
+      
+      // Check if user created this group
+      final isCreator = await _isUserGroupCreator(groupId);
+      if (isCreator) {
+        print('📱 User created group $groupId - showing notification');
+        return true;
+      }
+      
+      print('📱 User has no history with group $groupId - no notification');
+      return false;
+    } catch (e) {
+      print('❌ Error checking group notification eligibility: $e');
+      return false;
+    }
+  }
+
+  /// Check if user has messaged in this group before
+  Future<bool> _hasUserMessagedInGroup(int groupId) async {
+    try {
+      // This would typically make an API call to check message history
+      // For now, we'll use a simple approach - check if user is a member
+      // In a real implementation, you'd check the message history
+      final response = await http.get(
+        Uri.parse('$_baseUrl/groups/$groupId/messages?userEmail=$_userEmail&limit=1'),
+        headers: {'Content-Type': 'application/json'},
+      );
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['messages'] != null && (data['messages'] as List).isNotEmpty;
+      }
+      return false;
+    } catch (e) {
+      print('❌ Error checking message history: $e');
+      return false;
+    }
+  }
+
+  /// Check if user created this group
+  Future<bool> _isUserGroupCreator(int groupId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/groups/$groupId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['creatorEmail'] == _userEmail;
+      }
+      return false;
+    } catch (e) {
+      print('❌ Error checking group creator: $e');
+      return false;
+    }
+  }
+
+  /// Get group name by ID
+  Future<String> _getGroupName(int? groupId) async {
+    if (groupId == null) return 'Unknown Group';
+    
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/groups/$groupId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['name'] ?? 'Group $groupId';
+      }
+      return 'Group $groupId';
+    } catch (e) {
+      print('❌ Error getting group name: $e');
+      return 'Group $groupId';
+    }
+  }
+
+  /// Handle tip notifications
+  void _handleTipNotification(dynamic data, String type) async {
+    try {
+      final tipData = Map<String, dynamic>.from(data);
+      final amount = tipData['amount'] as double?;
+      final fromUser = tipData['fromUser'] as String?;
+      final toUser = tipData['toUser'] as String?;
+      final message = tipData['message'] as String?;
+      
+      // Only show notifications for the current user
+      if (toUser != _userEmail && fromUser != _userEmail) return;
+      
+      String title;
+      String body;
+      
+      if (type == 'received') {
+        final fromName = _getDisplayName(fromUser ?? '');
+        title = '💰 Tip Received!';
+        body = '$fromName sent you \$${amount?.toStringAsFixed(2) ?? '0.00'}';
+        if (message != null && message.isNotEmpty) {
+          body += ': "$message"';
+        }
+      } else if (type == 'withdrawn') {
+        title = '💸 Tip Withdrawn';
+        body = 'You withdrew \$${amount?.toStringAsFixed(2) ?? '0.00'}';
+      } else {
+        return;
+      }
+      
+      // Show notification
+      await _notificationService.showMessageNotification(
+        title: title,
+        body: body,
+        groupName: 'Tip',
+        groupId: 0, // Use 0 for tip notifications
+        senderName: type == 'received' ? _getDisplayName(fromUser ?? '') : 'You',
+      );
+    } catch (e) {
+      print('❌ Error handling tip notification: $e');
+    }
+  }
+
+  /// Track that user has messaged in a group (for notification purposes)
+  void _trackUserMessagingInGroup(int groupId) {
+    // In a real implementation, you might store this locally or send to backend
+    // For now, we'll just log it
+    print('📝 User $_userEmail has messaged in group $groupId - will receive notifications');
+  }
+
+  /// Get display name for user email
+  String _getDisplayName(String email) {
+    if (email.isEmpty) return 'Unknown User';
+    // Extract name from email (before @)
+    final name = email.split('@').first;
+    // Capitalize first letter
+    return name.isNotEmpty ? name[0].toUpperCase() + name.substring(1) : 'User';
+  }
+
   /// Disconnect from WebSocket
   Future<void> disconnect() async {
     if (_socket != null) {
@@ -338,6 +543,12 @@ class WebSocketService {
 
   /// Check if connected
   bool get isConnected => _isConnected;
+
+  /// Set current group ID (for notification purposes)
+  void setCurrentGroupId(int? groupId) {
+    _currentGroupId = groupId;
+    print('📍 Current group set to: $groupId');
+  }
 
   /// Get current user email
   String? get userEmail => _userEmail;

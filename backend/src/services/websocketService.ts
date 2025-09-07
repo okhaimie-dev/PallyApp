@@ -332,4 +332,10 @@ export class WebSocketService {
       user => user.currentGroupId === groupId
     );
   }
+
+  // Broadcast message to all connected clients
+  public broadcastMessage(messageData: any): void {
+    console.log(`📡 Broadcasting message to all clients:`, messageData);
+    this.io.emit('new_message', messageData);
+  }
 }

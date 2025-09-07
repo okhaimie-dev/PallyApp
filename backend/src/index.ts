@@ -406,6 +406,16 @@ app.post("/groups/:groupId/messages", async (req, res) => {
     );
 
     if (result.success) {
+      // Broadcast message via WebSocket to all connected clients
+      const wsService = WebSocketService.getInstance();
+      wsService.broadcastMessage({
+        groupId: parseInt(groupId),
+        senderEmail: senderEmail,
+        content: content,
+        messageType: messageType || 'text',
+        createdAt: result.message?.createdAt || new Date().toISOString()
+      });
+      
       res.status(201).json(result);
     } else {
       res.status(400).json(result);
