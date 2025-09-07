@@ -238,6 +238,84 @@ class WalletService {
       return 0.0;
     }
   }
+
+  /// Check deployment status of wallet account
+  static Future<DeploymentStatus?> getDeploymentStatus(String email) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/wallet/$email/deployment-status'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          return DeploymentStatus.fromJson(data);
+        }
+      }
+      
+      print('❌ Failed to fetch deployment status: ${response.statusCode}');
+      return null;
+    } catch (e) {
+      print('❌ Error fetching deployment status: $e');
+      return null;
+    }
+  }
+
+  /// Deploy wallet account to Starknet
+  static Future<DeploymentResult?> deployAccount(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/wallet/$email/deploy'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          return DeploymentResult.fromJson(data);
+        }
+      }
+      
+      print('❌ Failed to deploy account: ${response.statusCode}');
+      final errorData = jsonDecode(response.body);
+      return DeploymentResult(
+        success: false,
+        message: errorData['error'] ?? 'Deployment failed',
+        accountAddress: '',
+      );
+    } catch (e) {
+      print('❌ Error deploying account: $e');
+      return DeploymentResult(
+        success: false,
+        message: 'Network error: $e',
+        accountAddress: '',
+      );
+    }
+  }
+
+  /// Get deployment cost estimate
+  static Future<DeploymentCost?> getDeploymentCost() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/wallet/deployment-cost'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          return DeploymentCost.fromJson(data['costInfo']);
+        }
+      }
+      
+      print('❌ Failed to fetch deployment cost: ${response.statusCode}');
+      return null;
+    } catch (e) {
+      print('❌ Error fetching deployment cost: $e');
+      return null;
+    }
+  }
 }
 
 /// Tip transaction model
@@ -348,6 +426,108 @@ class WalletBalances {
       strkBalance: json['strkBalance'] ?? '0',
       totalBalanceUSD: json['totalBalanceUSD'] ?? '0',
       walletAddress: json['walletAddress'] ?? '',
+    );
+  }
+}
+
+/// Deployment status model
+class DeploymentStatus {
+  final bool isDeployed;
+  final String accountAddress;
+  final String? deploymentHash;
+  final String? error;
+  final DeploymentRequirements? requirements;
+
+  DeploymentStatus({
+    required this.isDeployed,
+    required this.accountAddress,
+    this.deploymentHash,
+    this.error,
+    this.requirements,
+  });
+
+  factory DeploymentStatus.fromJson(Map<String, dynamic> json) {
+    return DeploymentStatus(
+      isDeployed: json['deploymentStatus']?['isDeployed'] ?? false,
+      accountAddress: json['deploymentStatus']?['accountAddress'] ?? '',
+      deploymentHash: json['deploymentStatus']?['deploymentHash'],
+      error: json['deploymentStatus']?['error'],
+      requirements: json['requirements'] != null 
+          ? DeploymentRequirements.fromJson(json['requirements'])
+          : null,
+    );
+  }
+}
+
+/// Deployment requirements model
+class DeploymentRequirements {
+  final bool hasMinimumSTRK;
+  final String currentBalance;
+  final String minimumRequired;
+  final bool canDeploy;
+
+  DeploymentRequirements({
+    required this.hasMinimumSTRK,
+    required this.currentBalance,
+    required this.minimumRequired,
+    required this.canDeploy,
+  });
+
+  factory DeploymentRequirements.fromJson(Map<String, dynamic> json) {
+    return DeploymentRequirements(
+      hasMinimumSTRK: json['hasMinimumSTRK'] ?? false,
+      currentBalance: json['currentBalance'] ?? '0',
+      minimumRequired: json['minimumRequired'] ?? '0.5',
+      canDeploy: json['canDeploy'] ?? false,
+    );
+  }
+}
+
+/// Deployment result model
+class DeploymentResult {
+  final bool success;
+  final String accountAddress;
+  final String? deploymentHash;
+  final String message;
+  final String? error;
+
+  DeploymentResult({
+    required this.success,
+    required this.accountAddress,
+    this.deploymentHash,
+    required this.message,
+    this.error,
+  });
+
+  factory DeploymentResult.fromJson(Map<String, dynamic> json) {
+    final deploymentResult = json['deploymentResult'] ?? json;
+    return DeploymentResult(
+      success: json['success'] ?? false,
+      accountAddress: deploymentResult['accountAddress'] ?? '',
+      deploymentHash: deploymentResult['deploymentHash'],
+      message: json['message'] ?? deploymentResult['message'] ?? '',
+      error: deploymentResult['error'],
+    );
+  }
+}
+
+/// Deployment cost model
+class DeploymentCost {
+  final String estimatedCost;
+  final String currency;
+  final String description;
+
+  DeploymentCost({
+    required this.estimatedCost,
+    required this.currency,
+    required this.description,
+  });
+
+  factory DeploymentCost.fromJson(Map<String, dynamic> json) {
+    return DeploymentCost(
+      estimatedCost: json['estimatedCost'] ?? '0.001',
+      currency: json['currency'] ?? 'STRK',
+      description: json['description'] ?? 'Estimated cost for account deployment',
     );
   }
 }

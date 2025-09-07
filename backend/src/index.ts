@@ -10,6 +10,7 @@ import { GroupService } from "./services/groupService";
 import { WebSocketService } from "./services/websocketService";
 import { BalanceService } from "./services/balanceService";
 import { TransactionService } from "./services/transactionService";
+import { AccountDeploymentService } from "./services/accountDeploymentService";
 import emailService from "./services/emailService";
 import {
   generalLimiter,
@@ -268,6 +269,134 @@ app.get("/admin/wallet-stats", async (req, res) => {
 
   } catch (err: any) {
     console.error("❌ Error retrieving wallet stats:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ========== ACCOUNT DEPLOYMENT ENDPOINTS ==========
+
+// Check if wallet account is deployed
+app.get("/wallet/:email/deployment-status", async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    if (!email) {
+      res.status(400).json({ error: "Email is required" });
+      return;
+    }
+
+    // Get wallet address first
+    const walletService = WalletManagementService.getInstance();
+    const walletInfo = walletService.getWalletInfo(email);
+
+    if (!walletInfo) {
+      res.status(404).json({ error: "Wallet not found" });
+      return;
+    }
+
+    // Check deployment status
+    const deploymentService = AccountDeploymentService.getInstance();
+    const deploymentStatus = await deploymentService.checkDeploymentStatus(walletInfo.walletAddress);
+
+    // Check deployment requirements
+    const requirements = await deploymentService.checkDeploymentRequirements(walletInfo.walletAddress);
+
+    res.json({
+      success: true,
+      deploymentStatus,
+      requirements
+    });
+
+  } catch (err: any) {
+    console.error("❌ Error checking deployment status:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Deploy wallet account
+app.post("/wallet/:email/deploy", async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    if (!email) {
+      res.status(400).json({ error: "Email is required" });
+      return;
+    }
+
+    // Get wallet with private key
+    const walletService = WalletManagementService.getInstance();
+    const dbService = (await import("./services/databaseService")).DatabaseService.getInstance();
+    const walletData = dbService.getWalletWithPrivateKey(email);
+
+    if (!walletData) {
+      res.status(404).json({ error: "Wallet not found" });
+      return;
+    }
+
+    // Check if already deployed
+    const deploymentService = AccountDeploymentService.getInstance();
+    const deploymentStatus = await deploymentService.checkDeploymentStatus(walletData.wallet.accountAddress);
+
+    if (deploymentStatus.isDeployed) {
+      res.status(400).json({ 
+        error: "Account is already deployed",
+        deploymentStatus 
+      });
+      return;
+    }
+
+    // Check deployment requirements
+    const requirements = await deploymentService.checkDeploymentRequirements(walletData.wallet.accountAddress);
+
+    if (!requirements.canDeploy) {
+      res.status(400).json({ 
+        error: "Insufficient STRK balance for deployment",
+        requirements,
+        message: `Minimum ${requirements.minimumRequired} STRK required, current balance: ${requirements.currentBalance} STRK`
+      });
+      return;
+    }
+
+    // Deploy the account
+    const deploymentResult = await deploymentService.deployAccount(
+      walletData.privateKey,
+      walletData.wallet.publicKey,
+      walletData.wallet.accountAddress
+    );
+
+    if (deploymentResult.success) {
+      res.json({
+        success: true,
+        message: "Account deployed successfully",
+        deploymentResult
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: deploymentResult.error || "Deployment failed",
+        deploymentResult
+      });
+    }
+
+  } catch (err: any) {
+    console.error("❌ Error deploying account:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get deployment cost estimate
+app.get("/wallet/deployment-cost", async (req, res) => {
+  try {
+    const deploymentService = AccountDeploymentService.getInstance();
+    const costInfo = await deploymentService.getDeploymentCost();
+
+    res.json({
+      success: true,
+      costInfo
+    });
+
+  } catch (err: any) {
+    console.error("❌ Error getting deployment cost:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -543,6 +672,9 @@ httpServer.listen(PORT, '0.0.0.0', () => {
   console.log('  POST /generate-otp - Generate OTP');
   console.log('  POST /wallet - Create/get wallet with OTP');
   console.log('  GET  /wallet/:email - Get wallet info (without private key)');
+  console.log('  GET  /wallet/:email/deployment-status - Check account deployment status');
+  console.log('  POST /wallet/:email/deploy - Deploy account to Starknet');
+  console.log('  GET  /wallet/deployment-cost - Get deployment cost estimate');
   console.log('  GET  /admin/wallet-stats - Get wallet statistics');
   console.log('  POST /groups - Create new group');
   console.log('  GET  /groups/user/:userEmail - Get user groups');
