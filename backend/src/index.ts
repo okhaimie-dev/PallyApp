@@ -8,6 +8,8 @@ import { WalletKeyService } from "./services/walletKeyService";
 import { WalletManagementService } from "./services/walletManagementService";
 import { GroupService } from "./services/groupService";
 import { WebSocketService } from "./services/websocketService";
+import { BalanceService } from "./services/balanceService";
+import { TransactionService } from "./services/transactionService";
 import emailService from "./services/emailService";
 import {
   generalLimiter,
@@ -188,6 +190,67 @@ app.get("/wallet/:email", async (req, res) => {
 
   } catch (err: any) {
     console.error("❌ Error retrieving wallet info:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get wallet balances endpoint
+app.get("/wallet/:email/balances", async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    if (!email) {
+      res.status(400).json({ error: "Email is required" });
+      return;
+    }
+
+    // Get wallet address first
+    const walletService = WalletManagementService.getInstance();
+    const walletInfo = walletService.getWalletInfo(email);
+
+    if (!walletInfo) {
+      res.status(404).json({ error: "Wallet not found" });
+      return;
+    }
+
+    // Get balances
+    const balanceService = BalanceService.getInstance();
+    const balances = await balanceService.getWalletBalances(walletInfo.walletAddress);
+
+    res.json({
+      success: true,
+      balances
+    });
+
+  } catch (err: any) {
+    console.error("❌ Error retrieving wallet balances:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get tip transactions endpoint
+app.get("/wallet/:email/tips", async (req, res) => {
+  try {
+    const { email } = req.params;
+    const limit = parseInt(req.query.limit as string) || 5;
+
+    if (!email) {
+      res.status(400).json({ error: "Email is required" });
+      return;
+    }
+
+    const transactionService = TransactionService.getInstance();
+    const tipTransactions = await transactionService.getTipTransactions(email, limit);
+    const totalTipsReceived = await transactionService.getTotalTipsReceived(email);
+
+    res.json({
+      success: true,
+      tipTransactions,
+      totalTipsReceived
+    });
+
+  } catch (err: any) {
+    console.error("❌ Error retrieving tip transactions:", err);
     res.status(500).json({ error: err.message });
   }
 });

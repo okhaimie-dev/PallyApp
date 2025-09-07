@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import '../services/wallet_service.dart';
 
 class WithdrawScreen extends StatefulWidget {
-  const WithdrawScreen({super.key});
+  final String userEmail;
+  
+  const WithdrawScreen({super.key, required this.userEmail});
 
   @override
   State<WithdrawScreen> createState() => _WithdrawScreenState();
@@ -16,6 +19,16 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
 
   final List<String> _currencies = ['USDC', 'STRK'];
   final List<String> _withdrawMethods = ['Bank Transfer', 'Crypto Wallet', 'PayPal'];
+  
+  // Balance state
+  String _totalBalance = '\$0.00';
+  bool _isLoadingBalance = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBalance();
+  }
 
   @override
   void dispose() {
@@ -23,6 +36,26 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
     _walletAddressController.dispose();
     _bankAccountController.dispose();
     super.dispose();
+  }
+
+  void _loadBalance() async {
+    try {
+      final balance = await WalletService.getTotalBalanceUSD(widget.userEmail);
+      if (mounted) {
+        setState(() {
+          _totalBalance = balance;
+          _isLoadingBalance = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading balance: $e');
+      if (mounted) {
+        setState(() {
+          _totalBalance = '\$0.00';
+          _isLoadingBalance = false;
+        });
+      }
+    }
   }
 
   @override
@@ -74,14 +107,23 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    '\$2,498.25',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  _isLoadingBalance
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          _totalBalance,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ],
               ),
             ),
@@ -407,16 +449,6 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
     );
   }
 
-  Color _getCurrencyColor(String currency) {
-    switch (currency) {
-      case 'USDC':
-        return const Color(0xFF2775CA);
-      case 'STRK':
-        return const Color(0xFF8B5CF6);
-      default:
-        return Colors.grey;
-    }
-  }
 
   IconData _getWithdrawMethodIcon(String method) {
     switch (method) {

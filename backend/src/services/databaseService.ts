@@ -128,10 +128,24 @@ export class DatabaseService {
       )
     `;
 
+    const createTipTransactionsTable = `
+      CREATE TABLE IF NOT EXISTS tip_transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sender_email TEXT NOT NULL,
+        receiver_email TEXT NOT NULL,
+        amount REAL NOT NULL,
+        token TEXT NOT NULL CHECK (token IN ('USDC', 'STRK')),
+        message TEXT,
+        transaction_hash TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
     this.db.exec(createWalletsTable);
     this.db.exec(createGroupsTable);
     this.db.exec(createGroupMembersTable);
     this.db.exec(createMessagesTable);
+    this.db.exec(createTipTransactionsTable);
     console.log("✅ Database tables initialized");
   }
 
@@ -505,6 +519,77 @@ export class DatabaseService {
    */
   public getRecentGroupMessages(groupId: number, limit: number = 20): MessageRecord[] {
     return this.getGroupMessages(groupId, limit, 0);
+  }
+
+  // ========== TIP TRANSACTION METHODS ==========
+
+  /**
+   * Create a tip transaction record
+   */
+  public createTipTransaction(
+    senderEmail: string,
+    receiverEmail: string,
+    amount: number,
+    token: 'USDC' | 'STRK',
+    message: string,
+    transactionHash?: string
+  ): number {
+    const stmt = this.db.prepare(`
+      INSERT INTO tip_transactions 
+      (sender_email, receiver_email, amount, token, message, transaction_hash)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    const result = stmt.run(senderEmail, receiverEmail, amount, token, message, transactionHash);
+    return result.lastInsertRowid as number;
+  }
+
+  /**
+   * Get tip transactions for a user (received tips)
+   */
+  public getTipTransactions(userEmail: string, limit: number = 5): any[] {
+    const stmt = this.db.prepare(`
+      SELECT 
+        id,
+        sender_email,
+        receiver_email,
+        amount,
+        token,
+        message,
+        created_at,
+        transaction_hash
+      FROM tip_transactions 
+      WHERE receiver_email = ? 
+      ORDER BY created_at DESC 
+      LIMIT ?
+    `);
+    
+    const rows = stmt.all(userEmail, limit) as any[];
+    
+    return rows.map(row => ({
+      id: row.id,
+      senderEmail: row.sender_email,
+      receiverEmail: row.receiver_email,
+      amount: row.amount,
+      token: row.token,
+      message: row.message || 'Great job!',
+      timestamp: new Date(row.created_at),
+      transactionHash: row.transaction_hash,
+    }));
+  }
+
+  /**
+   * Get total tips received by a user
+   */
+  public getTotalTipsReceived(userEmail: string): number {
+    const stmt = this.db.prepare(`
+      SELECT COALESCE(SUM(amount), 0) as total
+      FROM tip_transactions 
+      WHERE receiver_email = ?
+    `);
+    
+    const result = stmt.get(userEmail) as any;
+    return result?.total || 0;
   }
 
   /**

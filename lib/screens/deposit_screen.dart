@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import '../services/wallet_service.dart';
 
 class DepositScreen extends StatefulWidget {
-  const DepositScreen({super.key});
+  final String userEmail;
+  
+  const DepositScreen({super.key, required this.userEmail});
 
   @override
   State<DepositScreen> createState() => _DepositScreenState();
@@ -15,12 +18,42 @@ class _DepositScreenState extends State<DepositScreen> {
 
   final List<String> _currencies = ['USDC', 'STRK'];
   final List<String> _paymentMethods = ['Card', 'Bank Transfer', 'Crypto Wallet'];
+  
+  // Balance state
+  String _totalBalance = '\$0.00';
+  bool _isLoadingBalance = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBalance();
+  }
 
   @override
   void dispose() {
     _amountController.dispose();
     _walletAddressController.dispose();
     super.dispose();
+  }
+
+  void _loadBalance() async {
+    try {
+      final balance = await WalletService.getTotalBalanceUSD(widget.userEmail);
+      if (mounted) {
+        setState(() {
+          _totalBalance = balance;
+          _isLoadingBalance = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading balance: $e');
+      if (mounted) {
+        setState(() {
+          _totalBalance = '\$0.00';
+          _isLoadingBalance = false;
+        });
+      }
+    }
   }
 
   @override
@@ -72,14 +105,23 @@ class _DepositScreenState extends State<DepositScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    '\$1,247.50',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  _isLoadingBalance
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          _totalBalance,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ],
               ),
             ),
@@ -340,16 +382,6 @@ class _DepositScreenState extends State<DepositScreen> {
     );
   }
 
-  Color _getCurrencyColor(String currency) {
-    switch (currency) {
-      case 'USDC':
-        return const Color(0xFF2775CA);
-      case 'STRK':
-        return const Color(0xFF8B5CF6);
-      default:
-        return Colors.grey;
-    }
-  }
 
   IconData _getPaymentMethodIcon(String method) {
     switch (method) {

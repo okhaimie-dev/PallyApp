@@ -131,6 +131,160 @@ class WalletService {
     final walletData = await getStoredWalletData();
     return walletData?.privateKey;
   }
+
+  /// Get wallet balances (USDC + STRK)
+  static Future<WalletBalances?> getWalletBalances(String email) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/wallet/$email/balances'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          return WalletBalances.fromJson(data['balances']);
+        }
+      }
+      
+      return null;
+    } catch (e) {
+      print('Error getting wallet balances: $e');
+      return null;
+    }
+  }
+
+  /// Get total balance in USD format
+  static Future<String> getTotalBalanceUSD(String email) async {
+    final balances = await getWalletBalances(email);
+    if (balances != null) {
+      return '\$${balances.totalBalanceUSD}';
+    }
+    return '\$0.00';
+  }
+
+  /// Get formatted USDC balance
+  static Future<String> getUSDCBalance(String email) async {
+    final balances = await getWalletBalances(email);
+    if (balances != null) {
+      return '${balances.usdcBalance} USDC';
+    }
+    return '0.00 USDC';
+  }
+
+  /// Get formatted STRK balance
+  static Future<String> getSTRKBalance(String email) async {
+    final balances = await getWalletBalances(email);
+    if (balances != null) {
+      return '${balances.strkBalance} STRK';
+    }
+    return '0.00 STRK';
+  }
+
+  /// Get current user email from SharedPreferences
+  static Future<String?> getCurrentUserEmail() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('userEmail');
+    } catch (e) {
+      print('Error getting current user email: $e');
+      return null;
+    }
+  }
+
+  /// Get tip transactions for a user
+  static Future<List<TipTransaction>> getTipTransactions(String email, {int limit = 5}) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/wallet/$email/tips?limit=$limit'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          final List<dynamic> transactionsJson = data['tipTransactions'] ?? [];
+          return transactionsJson.map((json) => TipTransaction.fromJson(json)).toList();
+        }
+      }
+      
+      print('❌ Failed to fetch tip transactions: ${response.statusCode}');
+      return [];
+    } catch (e) {
+      print('❌ Error fetching tip transactions: $e');
+      return [];
+    }
+  }
+
+  /// Get total tips received by a user
+  static Future<double> getTotalTipsReceived(String email) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/wallet/$email/tips'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          return (data['totalTipsReceived'] ?? 0).toDouble();
+        }
+      }
+      
+      print('❌ Failed to fetch total tips received: ${response.statusCode}');
+      return 0.0;
+    } catch (e) {
+      print('❌ Error fetching total tips received: $e');
+      return 0.0;
+    }
+  }
+}
+
+/// Tip transaction model
+class TipTransaction {
+  final String id;
+  final String senderEmail;
+  final String receiverEmail;
+  final double amount;
+  final String token;
+  final String message;
+  final DateTime timestamp;
+  final String? transactionHash;
+
+  TipTransaction({
+    required this.id,
+    required this.senderEmail,
+    required this.receiverEmail,
+    required this.amount,
+    required this.token,
+    required this.message,
+    required this.timestamp,
+    this.transactionHash,
+  });
+
+  factory TipTransaction.fromJson(Map<String, dynamic> json) {
+    return TipTransaction(
+      id: json['id'] ?? '',
+      senderEmail: json['senderEmail'] ?? '',
+      receiverEmail: json['receiverEmail'] ?? '',
+      amount: (json['amount'] ?? 0).toDouble(),
+      token: json['token'] ?? 'USDC',
+      message: json['message'] ?? 'Great job!',
+      timestamp: DateTime.parse(json['timestamp'] ?? DateTime.now().toIso8601String()),
+      transactionHash: json['transactionHash'],
+    );
+  }
+
+  /// Get sender name from email
+  String get senderName {
+    final name = senderEmail.split('@')[0];
+    return name.isNotEmpty ? name[0].toUpperCase() + name.substring(1) : 'Unknown User';
+  }
+
+  /// Format amount with token
+  String get formattedAmount {
+    return '\$${amount.toStringAsFixed(2)} $token';
+  }
 }
 
 class WalletData {
@@ -173,4 +327,27 @@ class WalletInfo {
     required this.walletAddress,
     required this.publicKey,
   });
+}
+
+class WalletBalances {
+  final String usdcBalance;
+  final String strkBalance;
+  final String totalBalanceUSD;
+  final String walletAddress;
+
+  WalletBalances({
+    required this.usdcBalance,
+    required this.strkBalance,
+    required this.totalBalanceUSD,
+    required this.walletAddress,
+  });
+
+  factory WalletBalances.fromJson(Map<String, dynamic> json) {
+    return WalletBalances(
+      usdcBalance: json['usdcBalance'] ?? '0',
+      strkBalance: json['strkBalance'] ?? '0',
+      totalBalanceUSD: json['totalBalanceUSD'] ?? '0',
+      walletAddress: json['walletAddress'] ?? '',
+    );
+  }
 }

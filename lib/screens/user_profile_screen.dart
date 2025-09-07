@@ -689,7 +689,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const DepositScreen(),
+        builder: (context) => DepositScreen(userEmail: widget.userEmail),
       ),
     );
   }
@@ -698,7 +698,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const WithdrawScreen(),
+        builder: (context) => WithdrawScreen(userEmail: widget.userEmail),
       ),
     );
   }
