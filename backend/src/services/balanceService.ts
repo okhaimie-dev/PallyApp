@@ -35,10 +35,14 @@ export class BalanceService {
   private static readonly CACHE_DURATION = 300000; // 5 minute cache
 
   private constructor() {
-    // Use public Starknet mainnet RPC
+    // Use RPC URL from environment variables
+    const nodeUrl = process.env.NODE_URL || 'https://starknet-mainnet.public.blastapi.io';
+    
     this.provider = new RpcProvider({
-      nodeUrl: 'https://starknet-mainnet.public.blastapi.io',
+      nodeUrl: nodeUrl,
     });
+    
+    console.log(`🔗 BalanceService using RPC: ${nodeUrl}`);
   }
 
   public static getInstance(): BalanceService {

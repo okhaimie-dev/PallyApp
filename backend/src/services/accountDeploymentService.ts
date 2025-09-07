@@ -23,10 +23,15 @@ export class AccountDeploymentService {
   private static readonly ACCOUNT_CLASS_HASH = "0x540d7f5ec7ecf317e68d48564934cb99259781b1ee3cedbbc37ec5337f8e688";
 
   private constructor() {
-    // Use public Starknet mainnet RPC
+    // Use RPC URL from environment variables
+    const nodeUrl = process.env.NODE_URL || 'https://starknet-mainnet.public.blastapi.io';
+    
     this.provider = new RpcProvider({
-      nodeUrl: 'https://starknet-mainnet.public.blastapi.io',
+      nodeUrl: nodeUrl,
+      retries: 3,
     });
+    
+    console.log(`🔗 AccountDeploymentService using RPC: ${nodeUrl}`);
   }
 
   public static getInstance(): AccountDeploymentService {
