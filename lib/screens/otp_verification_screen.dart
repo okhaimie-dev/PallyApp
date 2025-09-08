@@ -42,36 +42,56 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       _errorMessage = null;
     });
 
-    try {
-      final response = await http.post(
-        Uri.parse('https://pallyapp.onrender.com/generate-otp'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'email': widget.email,
-          'openId': widget.openId,
-        }),
-      );
+    int retries = 3;
+    bool success = false;
+    
+    while (retries > 0 && !success) {
+      try {
+        final response = await http.post(
+          Uri.parse('https://pallyapp.onrender.com/generate-otp'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Connection': 'keep-alive',
+            'Keep-Alive': 'timeout=30, max=1000',
+            'User-Agent': 'PallyApp/1.0',
+          },
+          body: json.encode({
+            'email': widget.email,
+            'openId': widget.openId,
+          }),
+        ).timeout(const Duration(seconds: 30));
 
-      final data = json.decode(response.body);
+        final data = json.decode(response.body);
 
-      if (response.statusCode == 200 && data['success']) {
-        setState(() {
-          _successMessage = 'OTP sent to ${widget.email}';
-        });
-      } else {
-        setState(() {
-          _errorMessage = data['error'] ?? 'Failed to send OTP';
-        });
+        if (response.statusCode == 200 && data['success']) {
+          setState(() {
+            _successMessage = 'OTP sent to ${widget.email}';
+          });
+          success = true;
+        } else {
+          setState(() {
+            _errorMessage = data['error'] ?? 'Failed to send OTP';
+          });
+          success = true; // Don't retry on API errors
+        }
+      } catch (e) {
+        print('OTP generation attempt ${4 - retries} failed: $e');
+        retries--;
+        
+        if (retries == 0) {
+          setState(() {
+            _errorMessage = 'Network error: Connection failed after 3 attempts. Please check your internet connection and try again.';
+          });
+        } else {
+          // Wait before retry
+          await Future.delayed(const Duration(seconds: 2));
+        }
       }
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Network error: $e';
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
     }
+    
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   Future<void> _verifyOTP() async {

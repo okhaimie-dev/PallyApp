@@ -37,6 +37,13 @@ app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 app.use(validateRequest);
 
+// Add keep-alive headers for better connection stability
+app.use((req, res, next) => {
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Keep-Alive', 'timeout=30, max=1000');
+  next();
+});
+
 // Health check
 app.get("/", (_, res) => {
   res.json({ status: "API running 🚀" });

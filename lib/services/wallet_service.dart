@@ -12,38 +12,57 @@ class WalletService {
     required String openId,
     required String otp,
   }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/wallet'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'openId': openId,
-          'otp': otp,
-        }),
-      );
+    int retries = 3;
+    
+    while (retries > 0) {
+      try {
+        final response = await http.post(
+          Uri.parse('$_baseUrl/wallet'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Connection': 'keep-alive',
+            'Keep-Alive': 'timeout=30, max=1000',
+            'User-Agent': 'PallyApp/1.0',
+          },
+          body: jsonEncode({
+            'email': email,
+            'openId': openId,
+            'otp': otp,
+          }),
+        ).timeout(const Duration(seconds: 30));
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['success'] == true) {
-          final walletData = WalletData(
-            walletAddress: data['accountAddress'],
-            privateKey: data['privateKey'],
-            publicKey: data['publicKey'],
-            isNewWallet: data['isNewWallet'] ?? false,
-          );
-          
-          // Save wallet data securely
-          await _saveWalletData(walletData);
-          return walletData;
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          if (data['success'] == true) {
+            final walletData = WalletData(
+              walletAddress: data['accountAddress'],
+              privateKey: data['privateKey'],
+              publicKey: data['publicKey'],
+              isNewWallet: data['isNewWallet'] ?? false,
+            );
+            
+            // Save wallet data securely
+            await _saveWalletData(walletData);
+            return walletData;
+          }
         }
+        
+        return null;
+      } catch (e) {
+        print('Error getting/creating wallet (attempt ${4 - retries}): $e');
+        retries--;
+        
+        if (retries == 0) {
+          print('All wallet creation attempts failed');
+          return null;
+        }
+        
+        // Wait before retry
+        await Future.delayed(const Duration(seconds: 2));
       }
-      
-      return null;
-    } catch (e) {
-      print('Error getting/creating wallet: $e');
-      return null;
     }
+    
+    return null;
   }
 
   /// Get wallet info without private key
