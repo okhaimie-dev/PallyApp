@@ -70,6 +70,10 @@ class DeeplinkService {
   /// Handle incoming deep links
   void _handleIncomingLink(Uri uri) {
     print('🔗 Received deep link: $uri');
+    print('🔗 Scheme: ${uri.scheme}');
+    print('🔗 Host: ${uri.host}');
+    print('🔗 Path: ${uri.path}');
+    print('🔗 Path segments: ${uri.pathSegments}');
     
     if (_context == null) {
       print('❌ Context is null, storing pending link');
@@ -86,11 +90,21 @@ class DeeplinkService {
     // Parse the deep link
     if (uri.scheme == 'pally') {
       // Handle custom scheme: pally://join-group/123
-      final pathSegments = uri.pathSegments;
+      // For custom schemes, the host might be part of the path
+      String fullPath = uri.path;
+      if (uri.host.isNotEmpty && uri.host != 'localhost') {
+        fullPath = '/${uri.host}${uri.path}';
+      }
+      
+      final pathSegments = fullPath.split('/').where((s) => s.isNotEmpty).toList();
+      print('🔗 Processing pally scheme with full path: $fullPath');
+      print('🔗 Parsed path segments: $pathSegments');
       
       if (pathSegments.length >= 2 && pathSegments[0] == 'join-group') {
         final groupIdStr = pathSegments[1];
         final groupId = int.tryParse(groupIdStr);
+        
+        print('🔗 Group ID string: $groupIdStr, parsed: $groupId');
         
         if (groupId != null) {
           _handleGroupLink(groupId);
@@ -99,20 +113,27 @@ class DeeplinkService {
         }
       } else {
         print('❌ Invalid path segments for pally scheme: $pathSegments');
+        print('❌ Expected format: pally://join-group/{groupId}');
+        print('❌ Length: ${pathSegments.length}, First segment: ${pathSegments.isNotEmpty ? pathSegments[0] : 'empty'}');
       }
     } else if (uri.host == 'pallyapp.onrender.com' || uri.host == 'pally.app') {
       // Handle HTTP/HTTPS deep links: https://pallyapp.onrender.com/join-group/123
       final pathSegments = uri.pathSegments;
+      print('🔗 Processing HTTP scheme with path segments: $pathSegments');
       
       if (pathSegments.length >= 2 && pathSegments[0] == 'join-group') {
         final groupIdStr = pathSegments[1];
         final groupId = int.tryParse(groupIdStr);
+        
+        print('🔗 Group ID string: $groupIdStr, parsed: $groupId');
         
         if (groupId != null) {
           _handleGroupLink(groupId);
         } else {
           print('❌ Invalid group ID in deep link: $groupIdStr');
         }
+      } else {
+        print('❌ Invalid path segments for HTTP scheme: $pathSegments');
       }
     } else {
       print('❌ Unsupported deeplink scheme or host: ${uri.scheme}://${uri.host}');
@@ -121,14 +142,18 @@ class DeeplinkService {
 
   /// Handle group link - check if user is member and navigate accordingly
   void _handleGroupLink(int groupId) async {
+    print('🔗 Handling group link for group ID: $groupId');
 
     try {
       // Get the group details
       final group = await GroupService.getGroupById(groupId);
       if (group == null) {
         print('❌ Group not found: $groupId');
+        _showGroupNotFoundError();
         return;
       }
+
+      print('✅ Group found: ${group.name}');
 
       // Check if user is already a member of the group
       final userGroups = await GroupService.getUserGroups(_currentUser!.email);
@@ -139,14 +164,14 @@ class DeeplinkService {
         print('✅ User is already a member, navigating to group chat');
         _navigateToGroupChat(group);
       } else {
-        // User is not a member, show join group sheet
-        print('👥 User is not a member, showing join group sheet');
-        _showJoinGroupSheet(groupId);
+        // User is not a member, navigate to home and show join group sheet
+        print('👥 User is not a member, navigating to home and showing join group sheet');
+        _navigateToHomeAndShowJoinSheet(groupId);
       }
     } catch (e) {
       print('❌ Error handling group link: $e');
       // Fallback to showing join group sheet
-      _showJoinGroupSheet(groupId);
+      _navigateToHomeAndShowJoinSheet(groupId);
     }
   }
 
@@ -163,6 +188,24 @@ class DeeplinkService {
         ),
       ),
     );
+  }
+
+  /// Navigate to home and show join group sheet
+  void _navigateToHomeAndShowJoinSheet(int groupId) {
+    if (_context == null || _currentUser == null) return;
+
+    // Navigate to home page first
+    Navigator.pushNamedAndRemoveUntil(
+      _context!,
+      '/home',
+      (route) => false,
+      arguments: _currentUser,
+    ).then((_) {
+      // Show join group sheet after navigation
+      Future.delayed(const Duration(milliseconds: 500), () {
+        _showJoinGroupSheet(groupId);
+      });
+    });
   }
 
   /// Show the join group sheet
@@ -189,6 +232,35 @@ class DeeplinkService {
         // You could trigger a refresh of the groups list here
       }
     });
+  }
+
+  /// Show error when group is not found
+  void _showGroupNotFoundError() {
+    if (_context == null) return;
+
+    showDialog(
+      context: _context!,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text(
+          'Group Not Found',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'The group you\'re trying to join doesn\'t exist or has been deleted.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'OK',
+              style: TextStyle(color: Color(0xFF6366F1)),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Dispose the service
