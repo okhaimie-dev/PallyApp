@@ -62,6 +62,14 @@
 				<string>com.googleusercontent.apps.859144190804-n3rdo88pvskqcdmou62ovlepriadfbv2</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>pally-deeplink</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>pally</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>

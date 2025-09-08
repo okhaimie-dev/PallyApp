@@ -58,7 +58,24 @@ class DeeplinkService {
     }
 
     // Parse the deep link
-    if (uri.host == 'pallyapp.onrender.com' || uri.host == 'pally.app') {
+    if (uri.scheme == 'pally') {
+      // Handle custom scheme: pally://join-group/123
+      final pathSegments = uri.pathSegments;
+      
+      if (pathSegments.length >= 2 && pathSegments[0] == 'join-group') {
+        final groupIdStr = pathSegments[1];
+        final groupId = int.tryParse(groupIdStr);
+        
+        if (groupId != null) {
+          _showJoinGroupSheet(groupId);
+        } else {
+          print('❌ Invalid group ID in deep link: $groupIdStr');
+        }
+      } else {
+        print('❌ Invalid path segments for pally scheme: $pathSegments');
+      }
+    } else if (uri.host == 'pallyapp.onrender.com' || uri.host == 'pally.app') {
+      // Handle HTTP/HTTPS deep links: https://pallyapp.onrender.com/join-group/123
       final pathSegments = uri.pathSegments;
       
       if (pathSegments.length >= 2 && pathSegments[0] == 'join-group') {
@@ -71,6 +88,8 @@ class DeeplinkService {
           print('❌ Invalid group ID in deep link: $groupIdStr');
         }
       }
+    } else {
+      print('❌ Unsupported deeplink scheme or host: ${uri.scheme}://${uri.host}');
     }
   }
 

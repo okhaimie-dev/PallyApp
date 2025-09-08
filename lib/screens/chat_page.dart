@@ -317,41 +317,44 @@ class _ChatPageState extends State<ChatPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: _getColorFromString(widget.group.color).withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
+        title: GestureDetector(
+          onTap: () => _navigateToGroupInfo(),
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: _getColorFromString(widget.group.color).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(_getIconFromString(widget.group.icon), color: _getColorFromString(widget.group.color), size: 20),
               ),
-              child: Icon(_getIconFromString(widget.group.icon), color: _getColorFromString(widget.group.color), size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.group.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.group.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  Text(
-                    widget.group.isPrivate ? 'Private Group' : 'Public Group',
-                    style: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: 12,
+                    Text(
+                      widget.group.isPrivate ? 'Private Group' : 'Public Group',
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 12,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           IconButton(
@@ -558,6 +561,25 @@ class _ChatPageState extends State<ChatPage> {
           userEmail: userName == "You" ? "you@example.com" : "${userName.toLowerCase().replaceAll(' ', '.')}@example.com",
           userPhotoUrl: null,
           isCurrentUser: userName == "You",
+        ),
+      ),
+    );
+  }
+
+  void _navigateToGroupInfo() {
+    // Create a User object from the current user email
+    final currentUser = User(
+      email: widget.userEmail,
+      name: widget.userEmail.split('@')[0], // Use email prefix as name
+      profilePicture: null,
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => GroupInfoScreen(
+          group: widget.group,
+          currentUser: currentUser,
         ),
       ),
     );
