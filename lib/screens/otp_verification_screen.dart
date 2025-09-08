@@ -44,7 +44,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.0.106:3000/generate-otp'),
+        Uri.parse('https://pallyapp.onrender.com/generate-otp'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'email': widget.email,
@@ -89,7 +89,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.0.106:3000/wallet'), // Use the new single endpoint
+        Uri.parse('https://pallyapp.onrender.com/wallet'), // Use the new single endpoint
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'email': widget.email,

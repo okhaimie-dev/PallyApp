@@ -5,7 +5,8 @@ import 'package:http/http.dart' as http;
 import 'notification_service.dart';
 
 class WebSocketService {
-  static const String _baseUrl = 'http://192.168.0.106:3000'; // Update with your backend URL
+  static const String _baseUrl = 'https://pallyapp.onrender.com'; // Render deployment URL
+  static const String _wsUrl = 'wss://pallyapp.onrender.com'; // WebSocket URL for secure connection
   static WebSocketService? _instance;
   IO.Socket? _socket;
   String? _userEmail;
@@ -44,12 +45,15 @@ class WebSocketService {
     _userEmail = userEmail;
 
     try {
-      print('🔌 Attempting to connect to WebSocket server: $_baseUrl');
+      print('🔌 Attempting to connect to WebSocket server: $_wsUrl');
       
-      _socket = IO.io(_baseUrl, IO.OptionBuilder()
-          .setTransports(['websocket'])
+      _socket = IO.io(_wsUrl, IO.OptionBuilder()
+          .setTransports(['websocket', 'polling'])
           .enableAutoConnect()
-          .setTimeout(10000) // 10 second timeout
+          .setTimeout(15000) // 15 second timeout
+          .enableReconnection()
+          .setReconnectionAttempts(3)
+          .setReconnectionDelay(2000)
           .build());
 
       // Wait for connection first
@@ -97,10 +101,10 @@ class WebSocketService {
       }
     });
 
-    // Timeout after 10 seconds
-    Timer(const Duration(seconds: 10), () {
+    // Timeout after 15 seconds
+    Timer(const Duration(seconds: 15), () {
       if (!completer.isCompleted) {
-        completer.completeError('Connection timeout after 10 seconds');
+        completer.completeError('Connection timeout after 15 seconds');
       }
     });
 
@@ -237,18 +241,25 @@ class WebSocketService {
     }
 
     final completer = Completer<void>();
+    bool isCompleted = false;
     
     // Listen for join confirmation
     _socket!.once('joined_group', (data) {
-      print('✅ Successfully joined group: $data');
-      _currentGroupId = groupId;
-      completer.complete();
+      if (!isCompleted) {
+        isCompleted = true;
+        print('✅ Successfully joined group: $data');
+        _currentGroupId = groupId;
+        completer.complete();
+      }
     });
 
     // Listen for join error
     _socket!.once('error', (data) {
-      print('❌ Error joining group: $data');
-      completer.completeError(data);
+      if (!isCompleted) {
+        isCompleted = true;
+        print('❌ Error joining group: $data');
+        completer.completeError(data);
+      }
     });
 
     _socket!.emit('join_group', {
@@ -262,8 +273,11 @@ class WebSocketService {
     try {
       await completer.future.timeout(const Duration(seconds: 5));
     } catch (e) {
-      print('❌ Timeout joining group: $e');
-      throw e;
+      if (!isCompleted) {
+        isCompleted = true;
+        print('❌ Timeout joining group: $e');
+        throw e;
+      }
     }
   }
 
@@ -325,6 +339,9 @@ class WebSocketService {
       throw e;
     }
   }
+  
+  /// Check if real-time features are available
+  bool get isRealTimeAvailable => _isConnected && _socket != null && _userEmail != null;
 
   /// Send typing start indicator
   void startTyping(int groupId) {
@@ -555,6 +572,9 @@ class WebSocketService {
 
   /// Check if connected
   bool get isConnected => _isConnected;
+  
+  /// Check if WebSocket is available (for graceful degradation)
+  bool get isWebSocketAvailable => _socket != null;
 
   /// Set current group ID (for notification purposes)
   void setCurrentGroupId(int? groupId) {

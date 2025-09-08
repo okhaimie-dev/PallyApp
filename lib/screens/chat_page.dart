@@ -51,22 +51,35 @@ class _ChatPageState extends State<ChatPage> {
       // Connect to WebSocket if not already connected
       if (!_wsService.isConnected) {
         print('🔌 Connecting to WebSocket...');
-        await _wsService.connect(widget.userEmail);
+        try {
+          await _wsService.connect(widget.userEmail);
+        } catch (e) {
+          print('❌ WebSocket connection failed: $e');
+          // Continue without real-time features - user can still send messages via API
+        }
       } else {
         print('🔌 WebSocket already connected');
       }
 
-      // Join the group
-      print('👥 Joining group: ${widget.group.id}');
-      await _wsService.joinGroup(widget.group.id);
-      
-      // Set current group for notification purposes
-      _wsService.setCurrentGroupId(widget.group.id);
+      // Join the group if WebSocket is available
+      if (_wsService.isRealTimeAvailable) {
+        print('👥 Joining group: ${widget.group.id}');
+        try {
+          await _wsService.joinGroup(widget.group.id);
+          // Set current group for notification purposes
+          _wsService.setCurrentGroupId(widget.group.id);
+        } catch (e) {
+          print('❌ Error joining group: $e');
+          // Continue without real-time features
+        }
+      } else {
+        print('⚠️ WebSocket not available - using API-only mode');
+      }
 
       // Listen for new messages (only set up once)
       _wsService.messageStream.listen((data) {
         print('💬 Received message: $data');
-        if (data['groupId'] == widget.group.id) {
+        if (data['groupId'] == widget.group.id && mounted) {
           setState(() {
             _messages.add(ChatMessage(
               text: data['content'],
@@ -112,6 +125,8 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   void _loadMessages() async {
+    if (!mounted) return;
+    
     setState(() {
       _isLoadingMessages = true;
     });
@@ -123,20 +138,24 @@ class _ChatPageState extends State<ChatPage> {
         limit: 50,
       );
 
-      setState(() {
-        _messages = messages.map((msg) => ChatMessage(
-          text: msg.content,
-          isMe: msg.senderEmail == widget.userEmail,
-          senderName: msg.senderEmail == widget.userEmail ? "You" : _getDisplayName(msg.senderEmail),
-          timestamp: DateTime.parse(msg.createdAt),
-        )).toList();
-        _isLoadingMessages = false;
-      });
+      if (mounted) {
+        setState(() {
+          _messages = messages.map((msg) => ChatMessage(
+            text: msg.content,
+            isMe: msg.senderEmail == widget.userEmail,
+            senderName: msg.senderEmail == widget.userEmail ? "You" : _getDisplayName(msg.senderEmail),
+            timestamp: DateTime.parse(msg.createdAt),
+          )).toList();
+          _isLoadingMessages = false;
+        });
+      }
     } catch (e) {
       print('Error loading messages: $e');
-      setState(() {
-        _isLoadingMessages = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoadingMessages = false;
+        });
+      }
     }
   }
 
@@ -180,9 +199,11 @@ class _ChatPageState extends State<ChatPage> {
     final messageText = _messageController.text.trim();
     _messageController.clear();
 
-    setState(() {
-      _isSendingMessage = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isSendingMessage = true;
+      });
+    }
 
     try {
       // Try WebSocket for real-time delivery
@@ -222,6 +243,35 @@ class _ChatPageState extends State<ChatPage> {
         }
       }
       
+      // Fallback to API if WebSocket completely fails
+      try {
+        print('🔄 Falling back to API for message sending...');
+        await GroupService.sendMessage(
+          groupId: widget.group.id,
+          content: messageText,
+          senderEmail: widget.userEmail,
+        );
+        
+        // Add message to local list since WebSocket isn't working
+        if (mounted) {
+          setState(() {
+            _messages.add(ChatMessage(
+              text: messageText,
+              isMe: true,
+              senderName: "You",
+              timestamp: DateTime.now(),
+            ));
+          });
+        }
+        
+        // Stop typing indicator
+        _wsService.stopTyping(widget.group.id);
+        _isTyping = false;
+        return; // Success, exit early
+      } catch (apiError) {
+        print('❌ API fallback also failed: $apiError');
+      }
+      
       // Show error message
       if (mounted) {
         String errorMessage = 'Failed to send message';
@@ -244,9 +294,11 @@ class _ChatPageState extends State<ChatPage> {
         );
       }
     } finally {
-      setState(() {
-        _isSendingMessage = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isSendingMessage = false;
+        });
+      }
     }
   }
 
@@ -286,12 +338,34 @@ class _ChatPageState extends State<ChatPage> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Text(
-                    widget.group.isPrivate ? 'Private Group' : 'Public Group',
-                    style: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: 12,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        widget.group.isPrivate ? 'Private Group' : 'Public Group',
+                        style: TextStyle(
+                          color: Colors.grey[400],
+                          fontSize: 12,
+                        ),
+                      ),
+                      if (!_wsService.isRealTimeAvailable) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'Offline Mode',
+                            style: TextStyle(
+                              color: Colors.orange,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),

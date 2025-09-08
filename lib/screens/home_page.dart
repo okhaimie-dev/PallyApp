@@ -42,7 +42,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void _connectWebSocket() async {
     final wsService = WebSocketService.getInstance();
     if (!wsService.isConnected) {
-      await wsService.connect(widget.user.email);
+      try {
+        await wsService.connect(widget.user.email);
+      } catch (e) {
+        print('❌ WebSocket connection failed: $e');
+        // Don't show error to user immediately, let them use the app without real-time features
+        // The WebSocket will retry automatically in the background
+      }
     }
     // Clear current group ID when on home screen so notifications can show
     wsService.clearCurrentGroupId();
