@@ -431,18 +431,46 @@ class WalletService {
         }
       }
       
-      // Handle error response
-      final errorData = jsonDecode(response.body);
-      return TokenTransferResult(
-        success: false,
-        message: errorData['error'] ?? 'Failed to transfer tokens',
-        transactionHash: null,
-      );
+      // Handle 404 error (endpoint not found on deployed server)
+      if (response.statusCode == 404) {
+        return TokenTransferResult(
+          success: false,
+          message: 'Token transfer feature is not available on the current server version. Please contact support.',
+          transactionHash: null,
+        );
+      }
+      
+      // Handle other error responses
+      try {
+        final errorData = jsonDecode(response.body);
+        return TokenTransferResult(
+          success: false,
+          message: errorData['error'] ?? 'Failed to transfer tokens',
+          transactionHash: null,
+        );
+      } catch (e) {
+        // If response body is not JSON (e.g., HTML error page)
+        return TokenTransferResult(
+          success: false,
+          message: 'Server error: ${response.statusCode}. Please try again later.',
+          transactionHash: null,
+        );
+      }
     } catch (e) {
       print('❌ Error transferring tokens: $e');
+      
+      // Handle specific error types
+      if (e.toString().contains('FormatException') || e.toString().contains('Unexpected Character')) {
+        return TokenTransferResult(
+          success: false,
+          message: 'Server returned invalid response.',
+          transactionHash: null,
+        );
+      }
+      
       return TokenTransferResult(
         success: false,
-        message: 'Network error: $e',
+        message: 'Network error: ${e.toString()}',
         transactionHash: null,
       );
     }

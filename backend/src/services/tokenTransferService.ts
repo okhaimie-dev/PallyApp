@@ -1,4 +1,4 @@
-import { RpcProvider, Account, CallData, Contract, uint256 } from 'starknet';
+import { RpcProvider, Account, CallData, Contract, uint256, ec, hash } from 'starknet';
 import { STRK_ABI } from '../abis/strk_abi';
 import { USDC_ABI } from '../abis/usdc_abi';
 import { DatabaseService } from './databaseService';
@@ -56,8 +56,33 @@ export class TokenTransferService {
     try {
       console.log(`🔄 Starting token transfer: ${params.amount} ${params.token} to ${params.recipientAddress}`);
 
+      // Derive account address from private key
+      const publicKey = ec.starkCurve.getStarkKey(params.senderPrivateKey);
+      const senderAddress = hash.calculateContractAddressFromHash(
+        publicKey,
+        "0x540d7f5ec7ecf317e68d48564934cb99259781b1ee3cedbbc37ec5337f8e688", // OZ account class hash
+        CallData.compile({ publicKey }),
+        0
+      );
+
       // Get sender account
-      const senderAccount = new Account(this.provider, params.senderPrivateKey, params.senderPrivateKey);
+      const senderAccount = new Account(this.provider, senderAddress, params.senderPrivateKey);
+      
+      // Check if account is deployed
+      try {
+        const accountCode = await this.provider.getClassHashAt(senderAddress);
+        if (!accountCode || accountCode === '0x0') {
+          return {
+            success: false,
+            error: 'Account is not deployed. Please deploy your account first.',
+          };
+        }
+      } catch (error) {
+        return {
+          success: false,
+          error: 'Account is not deployed. Please deploy your account first.',
+        };
+      }
       
       // Get token contract
       const tokenAddress = TokenTransferService.TOKEN_ADDRESSES[params.token];

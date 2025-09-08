@@ -22,6 +22,8 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
   
   // Balance state
   String _totalBalance = '\$0.00';
+  String _usdcBalance = '0.00 USDC';
+  String _strkBalance = '0.00 STRK';
   bool _isLoadingBalance = true;
   
   // Deployment state
@@ -48,10 +50,15 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
 
   void _loadBalance() async {
     try {
-      final balance = await WalletService.getTotalBalanceUSD(widget.userEmail);
+      final totalBalance = await WalletService.getTotalBalanceUSD(widget.userEmail);
+      final usdcBalance = await WalletService.getUSDCBalance(widget.userEmail);
+      final strkBalance = await WalletService.getSTRKBalance(widget.userEmail);
+      
       if (mounted) {
         setState(() {
-          _totalBalance = balance;
+          _totalBalance = totalBalance;
+          _usdcBalance = usdcBalance;
+          _strkBalance = strkBalance;
           _isLoadingBalance = false;
         });
       }
@@ -60,6 +67,8 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
       if (mounted) {
         setState(() {
           _totalBalance = '\$0.00';
+          _usdcBalance = '0.00 USDC';
+          _strkBalance = '0.00 STRK';
           _isLoadingBalance = false;
         });
       }
@@ -169,7 +178,22 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
             // Account Deployment Section
             if (!_isDeployed) _buildDeploymentSection(),
             
-            // Balance Card
+            // Balance Cards
+            Row(
+              children: [
+                Expanded(
+                  child: _buildBalanceCard('USDC', _usdcBalance, const Color(0xFF2775CA)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildBalanceCard('STRK', _strkBalance, const Color(0xFF6366F1)),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Total Balance Card
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -337,11 +361,13 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
             TextField(
               controller: _amountController,
               style: const TextStyle(color: Colors.white),
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
                 hintText: 'Enter amount to withdraw',
                 hintStyle: TextStyle(color: Colors.grey[400]),
-                prefixIcon: Icon(Icons.attach_money, color: Colors.grey[400]),
+                prefixIcon: _getTokenIcon(_selectedCurrency),
+                suffixText: _selectedCurrency,
+                suffixStyle: TextStyle(color: Colors.grey[400]),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -498,7 +524,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Withdrawals may take 1-3 business days to process. Minimum withdrawal amount is \$25.',
+                      'Crypto withdrawals are instant. Bank transfers may take 1-3 business days. Minimum withdrawal: 0.01 tokens. 0.1 tokens reserved for gas fees.',
                       style: TextStyle(
                         color: Colors.orange[300],
                         fontSize: 12,
@@ -734,7 +760,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
           border: Border.all(color: Colors.grey[700]!),
         ),
         child: Text(
-          '\$$amount',
+          '$amount $_selectedCurrency',
           style: const TextStyle(
             color: Colors.white,
             fontSize: 14,
@@ -746,6 +772,73 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
     );
   }
 
+
+  Widget _buildBalanceCard(String token, String balance, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color, color.withOpacity(0.8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Image.asset(
+            'assets/images/${token.toLowerCase()}.png',
+            width: 24,
+            height: 24,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            token,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          _isLoadingBalance
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    strokeWidth: 2,
+                  ),
+                )
+              : Text(
+                  balance,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+        ],
+      ),
+    );
+  }
+
+  Widget _getTokenIcon(String token) {
+    return Padding(
+      padding: const EdgeInsets.all(12.0),
+      child: Image.asset(
+        'assets/images/${token.toLowerCase()}.png',
+        width: 20,
+        height: 20,
+      ),
+    );
+  }
+
+  double _getCurrentTokenBalance() {
+    final balanceString = _selectedCurrency == 'USDC' ? _usdcBalance : _strkBalance;
+    final balanceValue = balanceString.split(' ')[0];
+    return double.tryParse(balanceValue) ?? 0.0;
+  }
 
   IconData _getWithdrawMethodIcon(String method) {
     switch (method) {
@@ -767,6 +860,31 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please enter a valid amount'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    // Check token-specific balance with 0.1 minimum remaining
+    final currentBalance = _getCurrentTokenBalance();
+    const minimumReserve = 0.1;
+    final maxWithdrawable = currentBalance - minimumReserve;
+    
+    if (amount > maxWithdrawable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Insufficient $_selectedCurrency balance. Available: ${maxWithdrawable.toStringAsFixed(6)} $_selectedCurrency (0.1 $_selectedCurrency reserved)'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    if (amount < 0.01) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Minimum withdrawal amount is 0.01'),
           backgroundColor: Colors.red,
         ),
       );
@@ -846,7 +964,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
           
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Successfully transferred ${amount.toStringAsFixed(2)} $_selectedCurrency to ${_walletAddressController.text.substring(0, 10)}...'),
+              content: Text('Successfully transferred ${amount.toStringAsFixed(6)} $_selectedCurrency to ${_walletAddressController.text.substring(0, 10)}...'),
               backgroundColor: const Color(0xFF10B981),
               action: SnackBarAction(
                 label: 'View',
@@ -874,7 +992,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
         
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Withdrawal request submitted for \$${amount.toStringAsFixed(2)} in $_selectedCurrency'),
+            content: Text('Withdrawal request submitted for ${amount.toStringAsFixed(6)} $_selectedCurrency'),
             backgroundColor: const Color(0xFF10B981),
           ),
         );
