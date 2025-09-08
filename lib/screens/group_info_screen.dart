@@ -32,9 +32,8 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
   }
 
   void _generateInviteLink() {
-    // Generate a unique invite link for this group
-    final baseUrl = 'https://pallyapp.onrender.com';
-    _groupInviteLink = '$baseUrl/join-group/${widget.group.id}';
+    // Generate a unique invite link for this group using custom scheme
+    _groupInviteLink = 'pally://join-group/${widget.group.id}';
   }
 
   void _loadGroupMembers() async {

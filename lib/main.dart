@@ -5,6 +5,7 @@ import 'screens/home_page.dart';
 import 'screens/chat_page.dart';
 import 'services/notification_service.dart';
 import 'services/group_service.dart';
+import 'services/deeplink_service.dart';
 
 // Global navigator key for navigation from anywhere in the app
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -101,8 +102,22 @@ void main() async {
   runApp(const PallyApp());
 }
 
-class PallyApp extends StatelessWidget {
+class PallyApp extends StatefulWidget {
   const PallyApp({super.key});
+
+  @override
+  State<PallyApp> createState() => _PallyAppState();
+}
+
+class _PallyAppState extends State<PallyApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Initialize deeplink service when app starts
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      DeeplinkService().initialize(context, null);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
