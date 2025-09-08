@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'user_profile_screen.dart';
+import 'group_info_screen.dart';
 import '../services/group_service.dart';
 import '../services/websocket_service.dart';
+import '../models/user.dart';
+import '../models/group.dart';
 
 class ChatPage extends StatefulWidget {
   final Group group;
@@ -144,7 +147,7 @@ class _ChatPageState extends State<ChatPage> {
             text: msg.content,
             isMe: msg.senderEmail == widget.userEmail,
             senderName: msg.senderEmail == widget.userEmail ? "You" : _getDisplayName(msg.senderEmail),
-            timestamp: DateTime.parse(msg.createdAt),
+            timestamp: msg.createdAt,
           )).toList();
           _isLoadingMessages = false;
         });
@@ -581,7 +584,20 @@ class _ChatPageState extends State<ChatPage> {
               ),
             ),
             const SizedBox(height: 20),
-            _buildOptionTile(Icons.info_outline, "Group Info", () {}),
+            _buildOptionTile(Icons.info_outline, "Group Info", () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => GroupInfoScreen(
+                    group: widget.group,
+                    currentUser: User(
+                      email: widget.userEmail,
+                      name: 'User', // We don't have the name in ChatPage
+                    ),
+                  ),
+                ),
+              );
+            }),
             _buildOptionTile(Icons.notifications, "Notifications", () {}),
             _buildOptionTile(Icons.people, "Members", () {}),
             _buildOptionTile(Icons.settings, "Settings", () {}),

@@ -56,7 +56,7 @@ void _navigateToGroupChat(int groupId) async {
     }
 
     // Get the group details
-    final group = await GroupService.getGroupById(groupId, userEmail);
+    final group = await GroupService.getGroupById(groupId);
     if (group != null) {
       print('📱 Group found: ${group.name}');
       

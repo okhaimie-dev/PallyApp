@@ -157,7 +157,7 @@ export class GroupService {
   /**
    * Get group by ID
    */
-  public getGroupById(groupId: number, userEmail: string): GroupResponse {
+  public getGroupById(groupId: number, userEmail?: string): GroupResponse {
     try {
       const group = this.dbService.getGroupById(groupId);
       
@@ -168,8 +168,8 @@ export class GroupService {
         };
       }
 
-      // Check if user is member (for private groups)
-      if (group.isPrivate && !this.dbService.isGroupMember(groupId, userEmail)) {
+      // Check if user is member (for private groups) - only if userEmail is provided
+      if (group.isPrivate && userEmail && !this.dbService.isGroupMember(groupId, userEmail)) {
         return {
           success: false,
           message: "Access denied. You are not a member of this group"

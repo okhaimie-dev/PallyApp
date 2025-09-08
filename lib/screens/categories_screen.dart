@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'chat_page.dart';
 import '../services/group_service.dart';
 import '../services/websocket_service.dart';
+import '../models/group.dart';
 
 class CategoriesScreen extends StatefulWidget {
   final String categoryName;

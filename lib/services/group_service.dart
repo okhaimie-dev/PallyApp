@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../models/group.dart';
 
 class GroupService {
   static const String _baseUrl = 'https://pallyapp.onrender.com'; // Render deployment URL
@@ -89,11 +90,11 @@ class GroupService {
     }
   }
 
-  /// Get group by ID
-  static Future<Group?> getGroupById(int groupId, String userEmail) async {
+  /// Get group by ID (for invite links - no userEmail required)
+  static Future<Group?> getGroupById(int groupId) async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/groups/$groupId?userEmail=$userEmail'),
+        Uri.parse('$_baseUrl/groups/$groupId'),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -106,7 +107,7 @@ class GroupService {
       
       return null;
     } catch (e) {
-      print('Error getting group: $e');
+      print('Error getting group by ID: $e');
       return null;
     }
   }
@@ -171,7 +172,7 @@ class GroupService {
   }
 
   /// Send message to group
-  static Future<Message?> sendMessage({
+  static Future<ChatMessage?> sendMessage({
     required int groupId,
     required String senderEmail,
     required String content,
@@ -191,7 +192,7 @@ class GroupService {
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
-          return Message.fromJson(data['message']);
+          return ChatMessage.fromJson(data['message']);
         }
       }
       
@@ -203,7 +204,7 @@ class GroupService {
   }
 
   /// Get group messages
-  static Future<List<Message>> getGroupMessages({
+  static Future<List<ChatMessage>> getGroupMessages({
     required int groupId,
     required String userEmail,
     int limit = 50,
@@ -219,7 +220,7 @@ class GroupService {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
           final messagesJson = data['messages'] as List;
-          return messagesJson.map((json) => Message.fromJson(json)).toList();
+          return messagesJson.map((json) => ChatMessage.fromJson(json)).toList();
         }
       }
       
@@ -228,136 +229,5 @@ class GroupService {
       print('Error getting group messages: $e');
       return [];
     }
-  }
-}
-
-class Group {
-  final int id;
-  final String name;
-  final String description;
-  final String category;
-  final String icon;
-  final String color;
-  final bool isPrivate;
-  final String createdBy;
-  final String createdAt;
-  final String updatedAt;
-
-  Group({
-    required this.id,
-    required this.name,
-    required this.description,
-    required this.category,
-    required this.icon,
-    required this.color,
-    required this.isPrivate,
-    required this.createdBy,
-    required this.createdAt,
-    required this.updatedAt,
-  });
-
-  factory Group.fromJson(Map<String, dynamic> json) {
-    return Group(
-      id: json['id'],
-      name: json['name'],
-      description: json['description'] ?? '',
-      category: json['category'],
-      icon: json['icon'] ?? 'group',
-      color: json['color'] ?? '#6366F1',
-      isPrivate: json['isPrivate'] ?? false,
-      createdBy: json['createdBy'],
-      createdAt: json['createdAt'],
-      updatedAt: json['updatedAt'],
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'description': description,
-      'category': category,
-      'icon': icon,
-      'color': color,
-      'isPrivate': isPrivate,
-      'createdBy': createdBy,
-      'createdAt': createdAt,
-      'updatedAt': updatedAt,
-    };
-  }
-}
-
-class GroupMember {
-  final int id;
-  final int groupId;
-  final String userEmail;
-  final String role;
-  final String joinedAt;
-
-  GroupMember({
-    required this.id,
-    required this.groupId,
-    required this.userEmail,
-    required this.role,
-    required this.joinedAt,
-  });
-
-  factory GroupMember.fromJson(Map<String, dynamic> json) {
-    return GroupMember(
-      id: json['id'],
-      groupId: json['groupId'],
-      userEmail: json['userEmail'],
-      role: json['role'],
-      joinedAt: json['joinedAt'],
-    );
-  }
-}
-
-class Message {
-  final int id;
-  final int groupId;
-  final String senderEmail;
-  final String content;
-  final String messageType;
-  final String createdAt;
-
-  Message({
-    required this.id,
-    required this.groupId,
-    required this.senderEmail,
-    required this.content,
-    required this.messageType,
-    required this.createdAt,
-  });
-
-  factory Message.fromJson(Map<String, dynamic> json) {
-    return Message(
-      id: json['id'],
-      groupId: json['groupId'],
-      senderEmail: json['senderEmail'],
-      content: json['content'],
-      messageType: json['messageType'] ?? 'text',
-      createdAt: json['createdAt'],
-    );
-  }
-}
-
-class GroupResponse {
-  final bool success;
-  final Group? group;
-  final String message;
-
-  GroupResponse({
-    required this.success,
-    this.group,
-    required this.message,
-  });
-
-  factory GroupResponse.fromJson(Map<String, dynamic> json) {
-    return GroupResponse(
-      success: json['success'],
-      group: json['group'] != null ? Group.fromJson(json['group']) : null,
-      message: json['message'],
-    );
   }
 }

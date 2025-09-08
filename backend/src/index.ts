@@ -621,8 +621,8 @@ app.get("/groups/:groupId", async (req, res) => {
     const { groupId } = req.params;
     const { userEmail } = req.query;
 
-    if (!groupId || !userEmail) {
-      res.status(400).json({ error: "Group ID and user email are required" });
+    if (!groupId) {
+      res.status(400).json({ error: "Group ID is required" });
       return;
     }
 

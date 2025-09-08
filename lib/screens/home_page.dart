@@ -9,6 +9,9 @@ import 'edit_profile_screen.dart';
 import '../services/wallet_service.dart';
 import '../services/group_service.dart';
 import '../services/websocket_service.dart';
+import '../services/deeplink_service.dart';
+import '../models/user.dart';
+import '../models/group.dart';
 
 class HomePage extends StatefulWidget {
   final GoogleSignInAccount user;
@@ -37,6 +40,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _loadWalletData();
     _loadUserGroups();
     _connectWebSocket();
+    _initializeDeeplinks();
+  }
+
+  void _initializeDeeplinks() {
+    // Initialize deeplink service with current user context
+    final currentUser = User(
+      email: widget.user.email,
+      name: widget.user.displayName ?? 'User',
+      profilePicture: widget.user.photoUrl,
+    );
+    
+    DeeplinkService().initialize(context, currentUser);
   }
 
   void _connectWebSocket() async {
@@ -807,8 +822,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       color: _getColorString(color),
       isPrivate: false,
       createdBy: 'system',
-      createdAt: DateTime.now().toIso8601String(),
-      updatedAt: DateTime.now().toIso8601String(),
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
     );
 
     return GestureDetector(
