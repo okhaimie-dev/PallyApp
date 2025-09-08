@@ -194,18 +194,10 @@ class DeeplinkService {
   void _navigateToHomeAndShowJoinSheet(int groupId) {
     if (_context == null || _currentUser == null) return;
 
-    // Navigate to home page first
-    Navigator.pushNamedAndRemoveUntil(
-      _context!,
-      '/home',
-      (route) => false,
-      arguments: _currentUser,
-    ).then((_) {
-      // Show join group sheet after navigation
-      Future.delayed(const Duration(milliseconds: 500), () {
-        _showJoinGroupSheet(groupId);
-      });
-    });
+    // For now, just show the join group sheet directly
+    // This avoids the type mismatch issue with GoogleSignInAccount
+    print('🔗 Showing join group sheet directly for group: $groupId');
+    _showJoinGroupSheet(groupId);
   }
 
   /// Show the join group sheet
@@ -216,14 +208,9 @@ class DeeplinkService {
       context: _context!,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        minChildSize: 0.3,
-        maxChildSize: 0.9,
-        builder: (context, scrollController) => JoinGroupSheet(
-          groupId: groupId,
-          currentUser: _currentUser,
-        ),
+      builder: (context) => JoinGroupSheet(
+        groupId: groupId,
+        currentUser: _currentUser,
       ),
     ).then((result) {
       // Handle the result if needed
