@@ -371,6 +371,82 @@ class WalletService {
       );
     }
   }
+
+  /// Transfer tokens to any recipient address (general transfer, not just tips)
+  static Future<TokenTransferResult?> transferTokens({
+    required String senderPrivateKey,
+    required String tokenName,
+    required double amount,
+    required String recipientAddress,
+    String? message,
+  }) async {
+    try {
+      // Validate token name
+      if (!['USDC', 'STRK'].contains(tokenName.toUpperCase())) {
+        return TokenTransferResult(
+          success: false,
+          message: 'Invalid token. Must be USDC or STRK',
+          transactionHash: null,
+        );
+      }
+
+      // Validate amount
+      if (amount <= 0) {
+        return TokenTransferResult(
+          success: false,
+          message: 'Amount must be greater than 0',
+          transactionHash: null,
+        );
+      }
+
+      // Validate recipient address format (basic Starknet address validation)
+      if (!recipientAddress.startsWith('0x') || recipientAddress.length != 66) {
+        return TokenTransferResult(
+          success: false,
+          message: 'Invalid recipient address format',
+          transactionHash: null,
+        );
+      }
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/transfer-tokens'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'senderPrivateKey': senderPrivateKey,
+          'tokenName': tokenName.toUpperCase(),
+          'amount': amount,
+          'recipientAddress': recipientAddress,
+          'message': message ?? 'Token transfer',
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          return TokenTransferResult(
+            success: true,
+            message: data['message'] ?? 'Transfer completed successfully',
+            transactionHash: data['transactionHash'],
+          );
+        }
+      }
+      
+      // Handle error response
+      final errorData = jsonDecode(response.body);
+      return TokenTransferResult(
+        success: false,
+        message: errorData['error'] ?? 'Failed to transfer tokens',
+        transactionHash: null,
+      );
+    } catch (e) {
+      print('❌ Error transferring tokens: $e');
+      return TokenTransferResult(
+        success: false,
+        message: 'Network error: $e',
+        transactionHash: null,
+      );
+    }
+  }
 }
 
 /// Tip transaction model
@@ -601,5 +677,18 @@ class TipSendResult {
     this.transactionHash,
     this.tipTransactionId,
     this.recipientAddress,
+  });
+}
+
+/// Token transfer result model
+class TokenTransferResult {
+  final bool success;
+  final String message;
+  final String? transactionHash;
+
+  TokenTransferResult({
+    required this.success,
+    required this.message,
+    this.transactionHash,
   });
 }

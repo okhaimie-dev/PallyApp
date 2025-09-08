@@ -393,6 +393,79 @@ app.post("/send-tip", async (req, res) => {
   }
 });
 
+// General token transfer endpoint (not just tips)
+app.post("/transfer-tokens", async (req, res) => {
+  try {
+    const { senderPrivateKey, tokenName, amount, recipientAddress, message } = req.body;
+
+    // Validate required fields
+    if (!senderPrivateKey || !tokenName || !amount || !recipientAddress) {
+      res.status(400).json({ 
+        error: "Missing required fields: senderPrivateKey, tokenName, amount, recipientAddress" 
+      });
+      return;
+    }
+
+    // Validate token type
+    if (!['USDC', 'STRK'].includes(tokenName.toUpperCase())) {
+      res.status(400).json({ 
+        error: "Invalid token. Must be 'USDC' or 'STRK'" 
+      });
+      return;
+    }
+
+    // Validate amount
+    const transferAmount = parseFloat(amount);
+    if (isNaN(transferAmount) || transferAmount <= 0) {
+      res.status(400).json({ 
+        error: "Amount must be a positive number" 
+      });
+      return;
+    }
+
+    // Validate recipient address format (basic Starknet address validation)
+    if (!recipientAddress.startsWith('0x') || recipientAddress.length !== 66) {
+      res.status(400).json({ 
+        error: "Invalid recipient address format. Must be a valid Starknet address (0x + 64 hex characters)" 
+      });
+      return;
+    }
+
+    console.log(`💸 Processing token transfer: ${transferAmount} ${tokenName} to ${recipientAddress}`);
+
+    // Get token transfer service
+    const tokenTransferService = TokenTransferService.getInstance();
+
+    // Execute token transfer
+    const transferResult = await tokenTransferService.transferTokens({
+      senderPrivateKey,
+      recipientAddress,
+      amount: transferAmount,
+      token: tokenName.toUpperCase() as 'USDC' | 'STRK',
+      message: message || 'Token transfer'
+    });
+
+    if (!transferResult.success) {
+      res.status(500).json({ 
+        error: transferResult.error || "Token transfer failed" 
+      });
+      return;
+    }
+
+    console.log(`✅ Token transfer completed: ${transferResult.transactionHash}`);
+
+    res.json({
+      success: true,
+      message: `Successfully transferred ${transferAmount} ${tokenName}`,
+      transactionHash: transferResult.transactionHash
+    });
+
+  } catch (err: any) {
+    console.error("❌ Error transferring tokens:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Admin endpoint to get wallet statistics
 app.get("/admin/wallet-stats", async (req, res) => {
   try {
@@ -815,6 +888,7 @@ httpServer.listen(PORT, '0.0.0.0', () => {
   console.log('  POST /wallet/:email/deploy - Deploy account to Starknet');
   console.log('  GET  /wallet/deployment-cost - Get deployment cost estimate');
   console.log('  POST /send-tip - Send tip to recipient');
+  console.log('  POST /transfer-tokens - Transfer tokens to any address');
   console.log('  GET  /admin/wallet-stats - Get wallet statistics');
   console.log('  POST /groups - Create new group');
   console.log('  GET  /groups/user/:userEmail - Get user groups');

@@ -760,23 +760,13 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
     }
   }
 
-  void _processWithdrawal() {
+  void _processWithdrawal() async {
     final amount = double.tryParse(_amountController.text);
     
-    if (amount == null || amount < 25) {
+    if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Minimum withdrawal amount is \$25'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-    
-    if (amount > 2498.25) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Insufficient balance'),
+          content: Text('Please enter a valid amount'),
           backgroundColor: Colors.red,
         ),
       );
@@ -826,17 +816,77 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
       ),
     );
     
-    // Simulate processing delay
-    Future.delayed(const Duration(seconds: 2), () {
+    try {
+      if (_selectedMethod == 'Crypto Wallet') {
+        // Use real token transfer for crypto wallet withdrawals
+        final privateKey = await WalletService.getPrivateKey();
+        if (privateKey == null) {
+          Navigator.pop(context); // Close loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Unable to access wallet private key'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+        
+        final transferResult = await WalletService.transferTokens(
+          senderPrivateKey: privateKey,
+          tokenName: _selectedCurrency,
+          amount: amount,
+          recipientAddress: _walletAddressController.text.trim(),
+          message: 'Withdrawal to external wallet',
+        );
+        
+        Navigator.pop(context); // Close loading dialog
+        
+        if (transferResult?.success == true) {
+          Navigator.pop(context); // Close withdraw screen
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Successfully transferred ${amount.toStringAsFixed(2)} $_selectedCurrency to ${_walletAddressController.text.substring(0, 10)}...'),
+              backgroundColor: const Color(0xFF10B981),
+              action: SnackBarAction(
+                label: 'View',
+                textColor: Colors.white,
+                onPressed: () {
+                  // You could add functionality to view the transaction on a block explorer
+                  print('Transaction Hash: ${transferResult?.transactionHash}');
+                },
+              ),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(transferResult?.message ?? 'Transfer failed'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } else {
+        // For non-crypto methods, simulate processing (as before)
+        await Future.delayed(const Duration(seconds: 2));
+        Navigator.pop(context); // Close loading dialog
+        Navigator.pop(context); // Close withdraw screen
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Withdrawal request submitted for \$${amount.toStringAsFixed(2)} in $_selectedCurrency'),
+            backgroundColor: const Color(0xFF10B981),
+          ),
+        );
+      }
+    } catch (e) {
       Navigator.pop(context); // Close loading dialog
-      Navigator.pop(context); // Close withdraw screen
-      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Withdrawal request submitted for \$${amount.toStringAsFixed(2)} in $_selectedCurrency'),
-          backgroundColor: const Color(0xFF10B981),
+          content: Text('Withdrawal failed: $e'),
+          backgroundColor: Colors.red,
         ),
       );
-    });
+    }
   }
 }
