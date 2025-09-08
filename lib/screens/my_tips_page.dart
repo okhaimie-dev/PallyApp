@@ -103,11 +103,14 @@ class _MyTipsPageState extends State<MyTipsPage> {
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
             // Balance Overview Card
             Container(
               width: double.infinity,
@@ -242,37 +245,42 @@ class _MyTipsPageState extends State<MyTipsPage> {
             ...(_tipsHistory.map((tip) => _buildTipItem(tip)).toList()),
             
             const SizedBox(height: 20),
-            
-            // Info Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A1A1A),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue.withOpacity(0.3)),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: Colors.blue[300],
-                    size: 20,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Tips are automatically added to your wallet balance. You can withdraw them anytime.',
-                      style: TextStyle(
-                        color: Colors.blue[300],
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+          
+          // Info Card - Fixed at bottom
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A1A1A),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.blue.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: Colors.blue[300],
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Tips are automatically added to your wallet balance and you can withdraw them anytime',
+                    style: TextStyle(
+                      color: Colors.blue[300],
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -419,141 +427,7 @@ class _MyTipsPageState extends State<MyTipsPage> {
     }
   }
 
-  void _showWithdrawTipsDialog(BuildContext context) {
-    final TextEditingController amountController = TextEditingController();
-    String selectedCurrency = 'USDC';
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text(
-          'Withdraw Tips',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Available Balance: \$${_totalTipsReceived.toStringAsFixed(2)}',
-              style: TextStyle(
-                color: Colors.grey[300],
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: amountController,
-              style: const TextStyle(color: Colors.white),
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Amount (\$)',
-                labelStyle: TextStyle(color: Colors.grey[400]),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFF6366F1)),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: selectedCurrency,
-              dropdownColor: const Color(0xFF2A2A2A),
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Currency',
-                labelStyle: TextStyle(color: Colors.grey[400]),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFF6366F1)),
-                ),
-              ),
-              items: [
-                DropdownMenuItem(
-                  value: 'USDC',
-                  child: Row(
-                    children: [
-                      Image.asset(
-                        'assets/images/usdc.png',
-                        width: 20,
-                        height: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      const Text('USDC'),
-                    ],
-                  ),
-                ),
-                DropdownMenuItem(
-                  value: 'STRK',
-                  child: Row(
-                    children: [
-                      Image.asset(
-                        'assets/images/strk.png',
-                        width: 20,
-                        height: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      const Text('STRK'),
-                    ],
-                  ),
-                ),
-              ],
-              onChanged: (value) {
-                selectedCurrency = value!;
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(color: Colors.grey[400])),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final amount = double.tryParse(amountController.text);
-              if (amount != null && amount > 0 && amount <= _totalTipsReceived) {
-                _withdrawTips(amount, selectedCurrency);
-                Navigator.pop(context);
-              } else if (amount != null && amount > _totalTipsReceived) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Insufficient balance'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6366F1),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Withdraw'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _withdrawTips(double amount, String currency) {
-    setState(() {
-      _totalTipsReceived -= amount;
-    });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Withdrew \$${amount.toStringAsFixed(2)} in $currency successfully!'),
-        backgroundColor: const Color(0xFF10B981),
-      ),
-    );
-  }
 
   Widget _buildBalanceItem(String label, double amount, IconData icon) {
     return Column(
@@ -711,115 +585,5 @@ class _MyTipsPageState extends State<MyTipsPage> {
     );
   }
 
-  void _showWithdrawOptionsDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text(
-          'Withdraw Options',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Choose what you want to withdraw:',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 20),
-            _buildWithdrawOption(
-              'Wallet Balance',
-              _walletBalance,
-              Icons.account_balance_wallet,
-              const Color(0xFF10B981),
-              () {
-                Navigator.pop(context);
-                _navigateToWithdraw(context);
-              },
-            ),
-            const SizedBox(height: 12),
-            _buildWithdrawOption(
-              'Tips Balance',
-              '\$${_totalTipsReceived.toStringAsFixed(2)}',
-              Icons.attach_money,
-              const Color(0xFFF59E0B),
-              () {
-                Navigator.pop(context);
-                _showWithdrawTipsDialog(context);
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(color: Colors.grey[400])),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildWithdrawOption(String title, String amount, IconData icon, Color color, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xFF2A2A2A),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    amount,
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.grey[400],
-              size: 16,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
