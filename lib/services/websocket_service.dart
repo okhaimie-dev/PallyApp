@@ -48,12 +48,12 @@ class WebSocketService {
       print('🔌 Attempting to connect to WebSocket server: $_wsUrl');
       
       _socket = IO.io(_wsUrl, IO.OptionBuilder()
-          .setTransports(['websocket', 'polling'])
+          .setTransports(['polling', 'websocket']) // Try polling first
           .enableAutoConnect()
-          .setTimeout(15000) // 15 second timeout
+          .setTimeout(20000) // 20 second timeout
           .enableReconnection()
-          .setReconnectionAttempts(3)
-          .setReconnectionDelay(2000)
+          .setReconnectionAttempts(5)
+          .setReconnectionDelay(3000)
           .build());
 
       // Wait for connection first
@@ -89,6 +89,8 @@ class WebSocketService {
     // Set up connection event handlers
     _socket!.onConnect((_) {
       print('✅ WebSocket connection established');
+      print('🔌 Socket ID: ${_socket!.id}');
+      print('🔌 Transport: ${_socket!.io.engine?.transport?.name ?? 'unknown'}');
       if (!completer.isCompleted) {
         completer.complete();
       }
@@ -96,15 +98,20 @@ class WebSocketService {
 
     _socket!.onConnectError((error) {
       print('❌ WebSocket connection error: $error');
+      print('🔌 Error details: ${error.toString()}');
       if (!completer.isCompleted) {
         completer.completeError(error);
       }
     });
+    
+    _socket!.onDisconnect((reason) {
+      print('🔌 WebSocket disconnected: $reason');
+    });
 
-    // Timeout after 15 seconds
-    Timer(const Duration(seconds: 15), () {
+    // Timeout after 20 seconds
+    Timer(const Duration(seconds: 20), () {
       if (!completer.isCompleted) {
-        completer.completeError('Connection timeout after 15 seconds');
+        completer.completeError('Connection timeout after 20 seconds');
       }
     });
 
