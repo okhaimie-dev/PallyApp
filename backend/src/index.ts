@@ -13,6 +13,7 @@ import { TransactionService } from "./services/transactionService";
 import { AccountDeploymentService } from "./services/accountDeploymentService";
 import { TokenTransferService } from "./services/tokenTransferService";
 import { DatabaseService } from "./services/databaseService";
+import { GlobalGroupService } from "./services/globalGroupService";
 import emailService from "./services/emailService";
 import {
   generalLimiter,
@@ -871,11 +872,27 @@ const wsService = WebSocketService.getInstance(httpServer);
 const groupService = GroupService.getInstance();
 groupService.setWebSocketService(wsService);
 
+// Initialize global groups service
+const globalGroupService = GlobalGroupService.getInstance();
+
 // Start server
-httpServer.listen(PORT, '0.0.0.0', () => {
+httpServer.listen(PORT, '0.0.0.0', async () => {
   console.log(`✅ API listening on http://localhost:${PORT}`);
   console.log(`🌐 Network accessible at http://192.168.0.106:${PORT}`);
   console.log(`🔌 WebSocket server running on ws://localhost:${PORT}`);
+  
+  // Initialize global groups after server starts
+  console.log('🚀 Initializing global groups...');
+  try {
+    const result = await globalGroupService.createAllGlobalGroups();
+    if (result.success) {
+      console.log(`✅ Global groups initialization completed: ${result.message}`);
+    } else {
+      console.log(`⚠️ Global groups initialization failed: ${result.message}`);
+    }
+  } catch (error) {
+    console.error('❌ Error initializing global groups:', error);
+  }
   console.log('🎯 Available endpoints:');
   console.log('  GET  / - Health check');
   console.log('  GET  /test-email - Test email connectivity');
