@@ -17,7 +17,7 @@ class _DepositScreenState extends State<DepositScreen> {
   final TextEditingController _walletAddressController = TextEditingController();
 
   final List<String> _currencies = ['USDC', 'STRK'];
-  final List<String> _paymentMethods = ['Card', 'Bank Transfer', 'Crypto Wallet'];
+  final List<String> _paymentMethods = ['Card', 'Bank Transfer', 'PayPal', 'Crypto Wallet'];
   
   // Balance state
   String _totalBalance = '\$0.00';
@@ -392,24 +392,41 @@ class _DepositScreenState extends State<DepositScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _processDeposit,
+                onPressed: _isMethodComingSoon() ? null : _processDeposit,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981),
+                  backgroundColor: _isMethodComingSoon() 
+                      ? Colors.grey[600] 
+                      : const Color(0xFF10B981),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                child: const Text(
-                  'Deposit',
-                  style: TextStyle(
+                child: Text(
+                  _isMethodComingSoon() ? 'Coming Soon' : 'Deposit',
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
             ),
+            
+            // Coming Soon Text
+            if (_isMethodComingSoon()) ...[
+              const SizedBox(height: 8),
+              Center(
+                child: Text(
+                  'Coming Soon',
+                  style: TextStyle(
+                    color: Colors.grey[400],
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            ],
             
             const SizedBox(height: 16),
             
@@ -686,11 +703,17 @@ class _DepositScreenState extends State<DepositScreen> {
         return Icons.credit_card;
       case 'Bank Transfer':
         return Icons.account_balance;
+      case 'PayPal':
+        return Icons.payment;
       case 'Crypto Wallet':
         return Icons.account_balance_wallet;
       default:
         return Icons.payment;
     }
+  }
+
+  bool _isMethodComingSoon() {
+    return _selectedMethod == 'Bank Transfer' || _selectedMethod == 'PayPal';
   }
 
   void _processDeposit() {
