@@ -4,6 +4,13 @@
 
 Pally is a comprehensive social group chat application that combines modern messaging features with blockchain integration. Built with Flutter for the frontend and Node.js/TypeScript for the backend, it provides users with the ability to create groups, chat in real-time, and send cryptocurrency tips using the Starknet blockchain.
 
+**✨ Latest Updates:**
+- 🎯 **Enhanced Tip System**: Token selection dropdown (USDC/STRK), deployment validation, and real tip history
+- 🔄 **Auto-scroll Chat**: Automatic scrolling to latest messages for better UX
+- 🌐 **Environment Configuration**: Seamless switching between development and production
+- 🛡️ **Improved Security**: Better deployment checks and error handling
+- 📱 **Optimized WebSocket**: Enhanced real-time communication with better connection handling
+
 ## 🏗️ Architecture
 
 ### Frontend (Flutter)
@@ -31,8 +38,13 @@ Pally is a comprehensive social group chat application that combines modern mess
 
 ### Blockchain Features
 - **Wallet Integration**: Automatic Starknet wallet creation and management
-- **Token Support**: USDC and STRK token support
-- **Tip System**: Send cryptocurrency tips to other users
+- **Token Support**: USDC and STRK token support with 2-decimal formatting
+- **Enhanced Tip System**: 
+  - Token selection dropdown (USDC/STRK)
+  - Deployment validation for senders
+  - Send tips to undeployed addresses (tokens stored safely)
+  - Real-time tip history with transaction details
+  - Dynamic UI with token-specific colors
 - **Account Deployment**: Deploy Starknet accounts for full functionality
 - **Balance Tracking**: Real-time balance monitoring with USD conversion
 - **Transaction History**: Complete transaction and tip history
@@ -43,6 +55,9 @@ Pally is a comprehensive social group chat application that combines modern mess
 - **Offline Support**: Local data persistence with SharedPreferences
 - **Security**: Encrypted private key storage
 - **Real-time Updates**: Live balance and transaction updates
+- **Auto-scroll Chat**: Automatic scrolling to latest messages for seamless UX
+- **Environment Configuration**: Dynamic switching between development and production
+- **Optimized WebSocket**: Enhanced connection handling with fallback mechanisms
 
 ## 🛠️ Technology Stack
 
@@ -86,32 +101,38 @@ dependencies:
 pally/
 ├── lib/                          # Flutter source code
 │   ├── main.dart                 # App entry point
+│   ├── config/                   # Configuration files
+│   │   └── app_config.dart      # Environment-based configuration
 │   ├── models/                   # Data models
 │   │   ├── user.dart            # User model
 │   │   └── group.dart           # Group and message models
 │   ├── screens/                  # UI screens
 │   │   ├── signin_page.dart     # Authentication screen
-│   │   ├── home_page.dart       # Main dashboard
-│   │   ├── chat_page.dart       # Group chat interface
+│   │   ├── home_page.dart       # Main dashboard with popular groups
+│   │   ├── chat_page.dart       # Group chat interface with auto-scroll
+│   │   ├── user_profile_screen.dart # User profiles with enhanced tip system
+│   │   ├── otp_verification_screen.dart # OTP verification with lifecycle fixes
 │   │   ├── deposit_screen.dart  # Deposit interface
 │   │   ├── withdraw_screen.dart # Withdrawal interface
 │   │   └── ...                  # Other screens
 │   └── services/                 # Business logic
-│       ├── wallet_service.dart  # Wallet management
+│       ├── wallet_service.dart  # Enhanced wallet management with tip history
 │       ├── group_service.dart   # Group operations
-│       ├── websocket_service.dart # Real-time communication
+│       ├── websocket_service.dart # Optimized real-time communication
 │       ├── notification_service.dart # Push notifications
 │       └── deeplink_service.dart # Deep linking
 ├── backend/                      # Backend source code
 │   ├── src/
-│   │   ├── index.ts             # Server entry point
+│   │   ├── index.ts             # Server entry point with enhanced endpoints
 │   │   ├── services/            # Business logic services
 │   │   │   ├── walletManagementService.ts
 │   │   │   ├── tokenTransferService.ts
 │   │   │   ├── groupService.ts
-│   │   │   ├── websocketService.ts
-│   │   │   ├── balanceService.ts
-│   │   │   └── databaseService.ts
+│   │   │   ├── websocketService.ts # Enhanced with group-specific broadcasting
+│   │   │   ├── balanceService.ts # STRK formatting to 2 decimals
+│   │   │   ├── databaseService.ts
+│   │   │   ├── otpService.ts    # OTP generation and verification
+│   │   │   └── accountDeploymentService.ts
 │   │   ├── middleware/          # Express middleware
 │   │   └── abis/               # Smart contract ABIs
 │   └── data/                    # SQLite database files
@@ -129,14 +150,24 @@ pally/
 
 ### Development vs Production Configuration
 
-The app automatically detects the environment:
+The app uses intelligent environment detection with `lib/config/app_config.dart`:
 - **Development (Default)**: Uses `192.168.0.106:3000` for backend and `ws://192.168.0.106:3000` for WebSocket
 - **Production**: Uses `https://pallyapp.onrender.com` for backend and `wss://pallyapp.onrender.com` for WebSocket
 
-To run in production mode, use:
+**Environment Switching:**
 ```bash
+# Development mode (default)
+flutter run
+
+# Production mode
 flutter run --dart-define=PRODUCTION=true
 ```
+
+**Configuration Features:**
+- ✅ Automatic environment detection
+- ✅ Dynamic URL switching for all services
+- ✅ WebSocket optimization for each environment
+- ✅ Network IP support for physical device testing
 
 ### Backend Setup
 
@@ -258,8 +289,9 @@ All services automatically use the appropriate URLs based on the environment.
 - `GET /wallet/deployment-cost` - Get deployment cost estimate
 
 ### Token Operations
-- `POST /send-tip` - Send cryptocurrency tip to another user
+- `POST /send-tip` - Send cryptocurrency tip to another user (supports token selection)
 - `POST /transfer-tokens` - Transfer tokens to any address
+- `GET /wallet/:email/tips` - Get tip transaction history with pagination
 
 ### Group Management
 - `POST /groups` - Create new group
@@ -286,7 +318,7 @@ All services automatically use the appropriate URLs based on the environment.
 ### Server to Client
 - `authenticated` - Authentication confirmation
 - `joined_group` - Group join confirmation
-- `new_message` - New message broadcast
+- `new_message` - New message broadcast (group-specific)
 - `user_joined/left` - User presence updates
 - `user_typing` - Typing indicators
 - `tip_notification` - Tip received notification
@@ -294,8 +326,8 @@ All services automatically use the appropriate URLs based on the environment.
 ## 💰 Blockchain Integration
 
 ### Supported Tokens
-- **USDC**: USD Coin on Starknet (6 decimals)
-- **STRK**: Starknet native token (18 decimals)
+- **USDC**: USD Coin on Starknet (6 decimals, formatted to 2 decimal places)
+- **STRK**: Starknet native token (18 decimals, formatted to 2 decimal places)
 
 ### Smart Contract Addresses
 - **USDC**: `0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06b3ad0a6e6`
@@ -307,6 +339,12 @@ All services automatically use the appropriate URLs based on the environment.
 - **Balance Monitoring**: Real-time balance tracking with USD conversion
 - **Transaction History**: Complete transaction and tip history
 - **Gas Management**: Automatic gas fee handling
+- **Enhanced Tip System**: 
+  - Token selection (USDC/STRK) with dynamic UI
+  - Deployment validation for senders
+  - Support for undeployed recipient addresses
+  - Real-time tip history with transaction details
+  - Token-specific color coding and formatting
 
 ## 🗄️ Database Schema
 
@@ -314,14 +352,16 @@ All services automatically use the appropriate URLs based on the environment.
 - **wallets**: User wallet information with encrypted private keys
 - **groups**: Group information and metadata
 - **group_members**: Group membership relationships
-- **messages**: Chat messages with timestamps
-- **tip_transactions**: Cryptocurrency tip records
+- **messages**: Chat messages with timestamps and sender information
+- **tip_transactions**: Cryptocurrency tip records with token selection
+- **otp_store**: OTP verification with expiration and attempt tracking
 
 ### Key Relationships
 - Users can belong to multiple groups
 - Groups can have multiple members
-- Messages belong to specific groups
-- Tips link sender and receiver users
+- Messages belong to specific groups with sender email tracking
+- Tips link sender and receiver users with token selection
+- OTP verification linked to user email with expiration
 
 ## 🚀 Deployment
 
@@ -362,6 +402,44 @@ The backend is deployed on Render with the following configuration:
 - **System Health**: Database connections, WebSocket connections
 - **Blockchain Integration**: Transaction success rates, balance updates
 
+## 🆕 Recent Improvements & Fixes
+
+### Latest Updates (v2.0)
+- **🎯 Enhanced Tip System**: 
+  - Added token selection dropdown (USDC/STRK)
+  - Implemented deployment validation for senders
+  - Support for sending tips to undeployed addresses
+  - Real-time tip history with transaction details
+  - Dynamic UI with token-specific colors
+
+- **🔄 Auto-scroll Chat**: 
+  - Automatic scrolling to latest messages
+  - Smooth animations for better UX
+  - Scroll controller management
+
+- **🌐 Environment Configuration**: 
+  - Dynamic switching between development and production
+  - Network IP support for physical device testing
+  - Optimized WebSocket connections
+
+- **🛡️ Security & Stability**: 
+  - Fixed `setState()` after dispose errors
+  - Improved OTP verification with lifecycle management
+  - Enhanced error handling and validation
+  - Better deployment status checks
+
+- **📱 UI/UX Improvements**: 
+  - Fixed group ID mappings for popular groups
+  - Corrected email domain issues in tip functionality
+  - Enhanced user profile navigation
+  - Improved balance formatting (STRK to 2 decimals)
+
+- **🔌 WebSocket Optimization**: 
+  - Group-specific message broadcasting
+  - Enhanced connection handling with fallbacks
+  - Better timeout and reconnection logic
+  - Optimized for both development and production
+
 ## 🔮 Future Enhancements
 
 ### Planned Features
@@ -371,6 +449,8 @@ The backend is deployed on Render with the following configuration:
 - **Group Moderation**: Admin tools and moderation features
 - **Advanced Notifications**: Push notification customization
 - **Analytics Dashboard**: User and system analytics
+- **Enhanced UI**: More animations and micro-interactions
+- **Group Categories**: Better organization and discovery
 
 ### Blockchain Enhancements
 - **NFT Support**: NFT trading and display
@@ -406,4 +486,17 @@ For technical support or questions:
 
 ---
 
-**Pally** - Connecting people through chat and cryptocurrency. Built with ❤️ using Flutter and Starknet.
+## 🎉 What Makes Pally Special
+
+**Pally** stands out as a comprehensive social platform that seamlessly integrates:
+- **Real-time Communication**: WebSocket-powered instant messaging
+- **Blockchain Integration**: Native Starknet support with USDC and STRK
+- **Enhanced User Experience**: Auto-scroll, environment switching, and optimized performance
+- **Security First**: Encrypted storage, deployment validation, and secure authentication
+- **Developer Friendly**: Clean architecture, comprehensive documentation, and easy setup
+
+**Built with ❤️ using Flutter, Node.js, and Starknet** - Connecting people through chat and cryptocurrency in the most innovative way possible.
+
+---
+
+*Last Updated: January 2025 - Version 2.0 with Enhanced Tip System & Auto-scroll Chat*
