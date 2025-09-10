@@ -38,6 +38,8 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   }
 
   Future<void> _generateOTP() async {
+    if (!mounted) return;
+    
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -46,7 +48,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     int retries = 3;
     bool success = false;
     
-    while (retries > 0 && !success) {
+    while (retries > 0 && !success && mounted) {
       try {
         final response = await http.post(
           Uri.parse('${AppConfig.baseUrl}/generate-otp'),
@@ -65,48 +67,60 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
         final data = json.decode(response.body);
 
         if (response.statusCode == 200 && data['success']) {
-          setState(() {
-            _successMessage = 'OTP sent to ${widget.email}';
-          });
+          if (mounted) {
+            setState(() {
+              _successMessage = 'OTP sent to ${widget.email}';
+            });
+          }
           success = true;
         } else {
-          setState(() {
-            _errorMessage = data['error'] ?? 'Failed to send OTP';
-          });
+          if (mounted) {
+            setState(() {
+              _errorMessage = data['error'] ?? 'Failed to send OTP';
+            });
+          }
           success = true; // Don't retry on API errors
         }
       } catch (e) {
         print('OTP generation attempt ${4 - retries} failed: $e');
         retries--;
         
-        if (retries == 0) {
+        if (retries == 0 && mounted) {
           setState(() {
             _errorMessage = 'Network error: Connection failed after 3 attempts. Please check your internet connection and try again.';
           });
-        } else {
+        } else if (retries > 0) {
           // Wait before retry
           await Future.delayed(const Duration(seconds: 2));
         }
       }
     }
     
-    setState(() {
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _verifyOTP() async {
+    if (!mounted) return;
+    
     if (_otpController.text.isEmpty) {
-      setState(() {
-        _errorMessage = 'Please enter the OTP';
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Please enter the OTP';
+        });
+      }
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final response = await http.post(
@@ -122,27 +136,37 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       final data = json.decode(response.body);
 
       if (response.statusCode == 200 && data['success']) {
-        setState(() {
-          _successMessage = data['message'] ?? 'Verification successful!';
-        });
+        if (mounted) {
+          setState(() {
+            _successMessage = data['message'] ?? 'Verification successful!';
+          });
 
-        // Go back to the previous screen with wallet data
-        Future.delayed(const Duration(seconds: 1), () {
-          Navigator.of(context).pop(data);
-        });
+          // Go back to the previous screen with wallet data
+          Future.delayed(const Duration(seconds: 1), () {
+            if (mounted) {
+              Navigator.of(context).pop(data);
+            }
+          });
+        }
       } else {
-        setState(() {
-          _errorMessage = data['error'] ?? 'OTP verification failed';
-        });
+        if (mounted) {
+          setState(() {
+            _errorMessage = data['error'] ?? 'OTP verification failed';
+          });
+        }
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Network error: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Network error: $e';
+        });
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 

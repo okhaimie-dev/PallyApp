@@ -368,28 +368,28 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           
           // Popular Global Groups - accessible to everyone
           _buildGlobalGroupCard(
-            'Flutter Developers',
-            'Join the global Flutter community',
+            'Programming & Development',
+            'Share code, ask questions, and discuss programming topics',
             '12.5k members',
-            Icons.flutter_dash,
-            const Color(0xFF00D4AA),
-            groupId: 16, // Real group ID
+            Icons.code,
+            const Color(0xFF10B981),
+            groupId: 2, // Real group ID
           ),
           _buildGlobalGroupCard(
             'Startup Founders',
             'Connect with entrepreneurs worldwide',
             '8.2k members',
-            Icons.rocket_launch,
+            Icons.business,
             const Color(0xFF6366F1),
-            groupId: 17, // Real group ID
+            groupId: 30, // Real group ID
           ),
           _buildGlobalGroupCard(
-            'Design Community',
-            'Share and discover amazing designs',
+            'Digital Art',
+            'Share digital artwork, illustrations, and designs',
             '15.1k members',
-            Icons.design_services,
+            Icons.palette,
             const Color(0xFFEC4899),
-            groupId: 18, // Real group ID
+            groupId: 13, // Real group ID
           ),
         ],
       ),
