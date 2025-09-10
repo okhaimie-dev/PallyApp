@@ -23,6 +23,7 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> {
   final TextEditingController _messageController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   List<ChatMessage> _messages = [];
   bool _isLoadingMessages = false;
   bool _isSendingMessage = false;
@@ -41,6 +42,7 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void dispose() {
     _messageController.dispose();
+    _scrollController.dispose();
     _typingTimer?.cancel();
     _wsService.leaveGroup();
     _wsService.setCurrentGroupId(null); // Clear current group
@@ -88,8 +90,13 @@ class _ChatPageState extends State<ChatPage> {
               text: data['content'],
               isMe: data['senderEmail'] == widget.userEmail,
               senderName: data['senderEmail'] == widget.userEmail ? "You" : _getDisplayName(data['senderEmail']),
+              senderEmail: data['senderEmail'],
               timestamp: DateTime.parse(data['createdAt']),
             ));
+          });
+          // Auto-scroll to bottom when new message arrives
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _scrollToBottom();
           });
         }
       });
@@ -147,9 +154,14 @@ class _ChatPageState extends State<ChatPage> {
             text: msg.content,
             isMe: msg.senderEmail == widget.userEmail,
             senderName: msg.senderEmail == widget.userEmail ? "You" : _getDisplayName(msg.senderEmail),
+            senderEmail: msg.senderEmail,
             timestamp: msg.createdAt,
           )).toList();
           _isLoadingMessages = false;
+        });
+        // Auto-scroll to bottom after loading messages
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToBottom();
         });
       }
     } catch (e) {
@@ -165,6 +177,16 @@ class _ChatPageState extends State<ChatPage> {
   String _getDisplayName(String email) {
     // Extract name from email (simple implementation)
     return email.split('@')[0];
+  }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   IconData _getIconFromString(String iconString) {
@@ -262,8 +284,13 @@ class _ChatPageState extends State<ChatPage> {
               text: messageText,
               isMe: true,
               senderName: "You",
+              senderEmail: widget.userEmail,
               timestamp: DateTime.now(),
             ));
+          });
+          // Auto-scroll to bottom after sending message
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _scrollToBottom();
           });
         }
         
@@ -372,6 +399,7 @@ class _ChatPageState extends State<ChatPage> {
                     child: CircularProgressIndicator(),
                   )
                 : ListView.builder(
+                    controller: _scrollController,
                     padding: const EdgeInsets.all(16),
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
@@ -471,7 +499,7 @@ class _ChatPageState extends State<ChatPage> {
         children: [
           if (!message.isMe) ...[
             GestureDetector(
-              onTap: () => _navigateToUserProfile(message.senderName),
+              onTap: () => _navigateToUserProfile(message.senderName, message.senderEmail),
               child: CircleAvatar(
                 radius: 16,
                 backgroundColor: _getColorFromString(widget.group.color).withOpacity(0.3),
@@ -552,13 +580,13 @@ class _ChatPageState extends State<ChatPage> {
   }
 
 
-  void _navigateToUserProfile(String userName) {
+  void _navigateToUserProfile(String userName, String userEmail) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => UserProfileScreen(
           userName: userName,
-          userEmail: userName == "You" ? "you@example.com" : "${userName.toLowerCase().replaceAll(' ', '.')}@example.com",
+          userEmail: userEmail,
           userPhotoUrl: null,
           isCurrentUser: userName == "You",
         ),
@@ -655,12 +683,14 @@ class ChatMessage {
   final String text;
   final bool isMe;
   final String senderName;
+  final String senderEmail;
   final DateTime timestamp;
 
   ChatMessage({
     required this.text,
     required this.isMe,
     required this.senderName,
+    required this.senderEmail,
     required this.timestamp,
   });
 }

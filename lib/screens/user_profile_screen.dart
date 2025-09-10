@@ -48,39 +48,26 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     super.dispose();
   }
 
-  void _loadTipData() {
-    // Mock data - in real app, this would come from your backend
-    _totalTipsReceived = 127.50;
-    _tipTransactions = [
-      TipTransaction(
-        from: "Alex Johnson",
-        amount: 25.00,
-        message: "Great help with the project!",
-        timestamp: DateTime.now().subtract(const Duration(days: 2)),
-        fromPhotoUrl: null,
-      ),
-      TipTransaction(
-        from: "Sarah Chen",
-        amount: 15.00,
-        message: "Thanks for the advice",
-        timestamp: DateTime.now().subtract(const Duration(days: 5)),
-        fromPhotoUrl: null,
-      ),
-      TipTransaction(
-        from: "Mike Wilson",
-        amount: 50.00,
-        message: "Amazing work on the design",
-        timestamp: DateTime.now().subtract(const Duration(days: 7)),
-        fromPhotoUrl: null,
-      ),
-      TipTransaction(
-        from: "Emma Davis",
-        amount: 37.50,
-        message: "Really helpful tutorial",
-        timestamp: DateTime.now().subtract(const Duration(days: 10)),
-        fromPhotoUrl: null,
-      ),
-    ];
+  void _loadTipData() async {
+    if (widget.userEmail.isNotEmpty) {
+      try {
+        // Load real tip data from backend
+        final tipTransactions = await WalletService.getTipTransactions(widget.userEmail, limit: 10);
+        final totalTips = await WalletService.getTotalTipsReceived(widget.userEmail);
+        
+        setState(() {
+          _tipTransactions = tipTransactions;
+          _totalTipsReceived = totalTips;
+        });
+      } catch (e) {
+        print('Error loading tip data: $e');
+        // Fallback to empty data
+        setState(() {
+          _tipTransactions = [];
+          _totalTipsReceived = 0.0;
+        });
+      }
+    }
   }
 
   void _loadWalletData() async {
@@ -498,6 +485,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     );
   }
 
+  String _getDisplayName(String email) {
+    // Extract name from email (before @)
+    final emailParts = email.split('@');
+    if (emailParts.isNotEmpty) {
+      final name = emailParts[0];
+      // Capitalize first letter of each word
+      return name.split('.').map((word) => 
+        word.isNotEmpty ? word[0].toUpperCase() + word.substring(1) : ''
+      ).join(' ');
+    }
+    return email;
+  }
+
   Widget _buildTipTransactionCard(TipTransaction tip) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -512,9 +512,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
             radius: 20,
             backgroundColor: const Color(0xFF10B981).withOpacity(0.2),
             child: Text(
-              tip.from[0].toUpperCase(),
-              style: const TextStyle(
-                color: Color(0xFF10B981),
+              _getDisplayName(tip.senderEmail)[0].toUpperCase(),
+              style: TextStyle(
+                color: tip.token == 'USDC' ? const Color(0xFF10B981) : const Color(0xFF6366F1),
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),
@@ -526,7 +526,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  tip.from,
+                  _getDisplayName(tip.senderEmail),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
@@ -557,9 +557,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
             ),
           ),
           Text(
-            '+\$${tip.amount.toStringAsFixed(2)}',
-            style: const TextStyle(
-              color: Color(0xFF10B981),
+            '+${tip.amount.toStringAsFixed(2)} ${tip.token}',
+            style: TextStyle(
+              color: tip.token == 'USDC' ? const Color(0xFF10B981) : const Color(0xFF6366F1),
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
@@ -603,8 +603,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
   }
 
   void _showTipDialog(BuildContext context) async {
-    // Check deployment status first
-    final deploymentStatus = await WalletService.getDeploymentStatus(widget.userEmail);
+    // Check deployment status of the current user (sender), not the recipient
+    final currentUserEmail = await WalletService.getCurrentUserEmail();
+    if (currentUserEmail == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to get user information'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    final deploymentStatus = await WalletService.getDeploymentStatus(currentUserEmail);
     
     if (deploymentStatus?.isDeployed != true) {
       // Show deployment dialog instead
@@ -612,7 +623,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       return;
     }
     
-    // If deployed, show the tip dialog
+    // Note: Recipient doesn't need to be deployed to receive tokens
+    // Tokens can be sent to any valid address and will be accessible once deployed
+    
+    // If sender is deployed, show the tip dialog
     _showActualTipDialog(context);
   }
 
@@ -711,80 +725,135 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     );
   }
 
+
   void _showActualTipDialog(BuildContext context) {
     final TextEditingController amountController = TextEditingController();
     final TextEditingController messageController = TextEditingController();
+    String selectedToken = 'USDC';
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: Text(
-          'Send Tip to ${widget.userName}',
-          style: const TextStyle(color: Colors.white),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: amountController,
-              style: const TextStyle(color: Colors.white),
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Amount (\$)',
-                labelStyle: TextStyle(color: Colors.grey[400]),
-                border: OutlineInputBorder(
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          title: Text(
+            'Send Tip to ${widget.userName}',
+            style: const TextStyle(color: Colors.white),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Token Selection Dropdown
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey[600]!),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFF10B981)),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: selectedToken,
+                    isExpanded: true,
+                    dropdownColor: const Color(0xFF2A2A2A),
+                    style: const TextStyle(color: Colors.white),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'USDC',
+                        child: Row(
+                          children: [
+                            Icon(Icons.attach_money, color: Color(0xFF10B981), size: 20),
+                            SizedBox(width: 8),
+                            Text('USDC'),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'STRK',
+                        child: Row(
+                          children: [
+                            Icon(Icons.diamond, color: Color(0xFF6366F1), size: 20),
+                            SizedBox(width: 8),
+                            Text('STRK'),
+                          ],
+                        ),
+                      ),
+                    ],
+                    onChanged: (String? newValue) {
+                      if (newValue != null) {
+                        setState(() {
+                          selectedToken = newValue;
+                        });
+                      }
+                    },
+                  ),
                 ),
               ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: amountController,
+                style: const TextStyle(color: Colors.white),
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Amount (${selectedToken == 'USDC' ? '\$' : 'STRK'})',
+                  labelStyle: TextStyle(color: Colors.grey[400]),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: selectedToken == 'USDC' ? const Color(0xFF10B981) : const Color(0xFF6366F1),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: messageController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Message (optional)',
+                  labelStyle: TextStyle(color: Colors.grey[400]),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: selectedToken == 'USDC' ? const Color(0xFF10B981) : const Color(0xFF6366F1),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: TextStyle(color: Colors.grey[400])),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: messageController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Message (optional)',
-                labelStyle: TextStyle(color: Colors.grey[400]),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFF10B981)),
-                ),
+            ElevatedButton(
+              onPressed: () {
+                final amount = double.tryParse(amountController.text);
+                if (amount != null && amount > 0) {
+                  _sendTip(amount, messageController.text, selectedToken);
+                  Navigator.pop(context);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: selectedToken == 'USDC' ? const Color(0xFF10B981) : const Color(0xFF6366F1),
+                foregroundColor: Colors.white,
               ),
+              child: const Text('Send Tip'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(color: Colors.grey[400])),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final amount = double.tryParse(amountController.text);
-              if (amount != null && amount > 0) {
-                _sendTip(amount, messageController.text);
-                Navigator.pop(context);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF10B981),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Send Tip'),
-          ),
-        ],
       ),
     );
   }
 
-  void _sendTip(double amount, String message) async {
+  void _sendTip(double amount, String message, String token) async {
     try {
       // Get sender's private key
       final senderPrivateKey = await WalletService.getPrivateKey();
@@ -810,7 +879,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       // Send tip via backend
       final result = await WalletService.sendTip(
         senderPrivateKey: senderPrivateKey,
-        selectedToken: 'USDC', // Default to USDC for now
+        selectedToken: token,
         amount: amount,
         recipientEmail: widget.userEmail,
         message: message,
@@ -822,8 +891,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       if (result != null && result.success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Tip of \$${amount.toStringAsFixed(2)} sent to ${widget.userName} successfully!'),
-            backgroundColor: const Color(0xFF10B981),
+            content: Text('Tip of ${amount.toStringAsFixed(2)} ${token} sent to ${widget.userName} successfully!'),
+            backgroundColor: token == 'USDC' ? const Color(0xFF10B981) : const Color(0xFF6366F1),
           ),
         );
       } else {
@@ -1074,18 +1143,3 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
   }
 }
 
-class TipTransaction {
-  final String from;
-  final double amount;
-  final String message;
-  final DateTime timestamp;
-  final String? fromPhotoUrl;
-
-  TipTransaction({
-    required this.from,
-    required this.amount,
-    required this.message,
-    required this.timestamp,
-    this.fromPhotoUrl,
-  });
-}
