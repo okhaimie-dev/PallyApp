@@ -77,7 +77,9 @@ export class BalanceService {
         
         // Format with proper decimal places
         const formattedBalance = tokenBalance.toString() + '.' + remainder.toString().padStart(decimals, '0');
-        return formattedBalance;
+        // Format to 2 decimal places for display
+        const balanceNumber = parseFloat(formattedBalance);
+        return balanceNumber.toFixed(2);
       }
 
       return '0';

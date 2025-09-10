@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/app_config.dart';
 
 class WalletService {
-  static const String _baseUrl = 'https://pallyapp.onrender.com'; // Render deployment URL
+  static String get _baseUrl => AppConfig.baseUrl;
   static const String _walletKey = 'user_wallet_data';
 
   /// Get or create wallet for user

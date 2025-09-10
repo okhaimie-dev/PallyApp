@@ -3,10 +3,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'notification_service.dart';
+import '../config/app_config.dart';
 
 class WebSocketService {
-  static const String _baseUrl = 'https://pallyapp.onrender.com'; // Render deployment URL
-  static const String _wsUrl = 'wss://pallyapp.onrender.com'; // WebSocket URL for secure connection
+  static String get _baseUrl => AppConfig.baseUrl;
+  static String get _wsUrl => AppConfig.wsUrl;
   static WebSocketService? _instance;
   IO.Socket? _socket;
   String? _userEmail;
@@ -48,12 +49,14 @@ class WebSocketService {
       print('🔌 Attempting to connect to WebSocket server: $_wsUrl');
       
       _socket = IO.io(_wsUrl, IO.OptionBuilder()
-          .setTransports(['polling', 'websocket']) // Try polling first
+          .setTransports(['websocket', 'polling']) // Try WebSocket first
           .enableAutoConnect()
-          .setTimeout(20000) // 20 second timeout
+          .setTimeout(30000) // 30 second timeout
           .enableReconnection()
-          .setReconnectionAttempts(5)
-          .setReconnectionDelay(3000)
+          .setReconnectionAttempts(3)
+          .setReconnectionDelay(2000)
+          .setReconnectionDelayMax(5000)
+          .enableForceNew()
           .build());
 
       // Wait for connection first
@@ -108,10 +111,10 @@ class WebSocketService {
       print('🔌 WebSocket disconnected: $reason');
     });
 
-    // Timeout after 20 seconds
-    Timer(const Duration(seconds: 20), () {
+    // Timeout after 30 seconds
+    Timer(const Duration(seconds: 30), () {
       if (!completer.isCompleted) {
-        completer.completeError('Connection timeout after 20 seconds');
+        completer.completeError('Connection timeout after 30 seconds');
       }
     });
 
@@ -340,7 +343,7 @@ class WebSocketService {
     
     // Wait for confirmation with timeout
     try {
-      await completer.future.timeout(const Duration(seconds: 5));
+      await completer.future.timeout(const Duration(seconds: 10));
     } catch (e) {
       print('❌ Timeout sending message: $e');
       throw e;

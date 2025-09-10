@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/group.dart';
+import '../config/app_config.dart';
 
 class GroupService {
-  static const String _baseUrl = 'https://pallyapp.onrender.com'; // Render deployment URL
+  static String get _baseUrl => AppConfig.baseUrl;
 
   /// Create a new group
   static Future<GroupResponse?> createGroup({

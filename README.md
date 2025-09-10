@@ -127,6 +127,17 @@ pally/
 - npm or yarn
 - Android Studio / Xcode (for mobile development)
 
+### Development vs Production Configuration
+
+The app automatically detects the environment:
+- **Development (Default)**: Uses `192.168.0.106:3000` for backend and `ws://192.168.0.106:3000` for WebSocket
+- **Production**: Uses `https://pallyapp.onrender.com` for backend and `wss://pallyapp.onrender.com` for WebSocket
+
+To run in production mode, use:
+```bash
+flutter run --dart-define=PRODUCTION=true
+```
+
 ### Backend Setup
 
 1. **Navigate to backend directory**:
@@ -149,13 +160,12 @@ pally/
    EMAIL_PASS=your-app-password
    ```
 
-4. **Build and start the server**:
+4. **Start the development server**:
    ```bash
-   npm run build
-   npm start
-   # Or for development:
    npm run dev
    ```
+   
+   The server will start on `http://192.168.0.106:3000` and automatically restart on file changes.
 
 ### Frontend Setup
 
@@ -173,10 +183,50 @@ pally/
    - Add your Google OAuth credentials to `android/app/google-services.json`
    - Configure iOS settings in `ios/Runner/Info.plist`
 
-4. **Run the app**:
+4. **Run the app in development mode** (default):
    ```bash
    flutter run
    ```
+   
+   The app will automatically connect to `192.168.0.106:3000` for development.
+
+5. **Run the app in production mode**:
+   ```bash
+   flutter run --dart-define=PRODUCTION=true
+   ```
+
+### Development Workflow
+
+1. **Start the backend server**:
+   ```bash
+   cd backend
+   npm run dev
+   ```
+
+2. **Start the Flutter app**:
+   ```bash
+   flutter run
+   ```
+
+3. **Make changes**: The backend will auto-reload, and Flutter supports hot reload for UI changes.
+
+4. **Test WebSocket connection**: The app will automatically connect to the local WebSocket server for real-time features.
+
+### Configuration Details
+
+The app uses environment-based configuration in `lib/config/app_config.dart`:
+
+```dart
+// Development (default)
+static const String _developmentBaseUrl = 'http://192.168.0.106:3000';
+static const String _developmentWsUrl = 'ws://192.168.0.106:3000';
+
+// Production
+static const String _productionBaseUrl = 'https://pallyapp.onrender.com';
+static const String _productionWsUrl = 'wss://pallyapp.onrender.com';
+```
+
+All services automatically use the appropriate URLs based on the environment.
 
 ## 🔐 Security Features
 

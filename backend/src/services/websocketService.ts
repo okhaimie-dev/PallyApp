@@ -337,10 +337,10 @@ export class WebSocketService {
     );
   }
 
-  // Broadcast message to all connected clients
+  // Broadcast message to specific group
   public broadcastMessage(messageData: any): void {
-    console.log(`📡 Broadcasting message to all clients:`, messageData);
-    this.io.emit('new_message', messageData);
+    console.log(`📡 Broadcasting message to group ${messageData.groupId}:`, messageData);
+    this.io.to(`group:${messageData.groupId}`).emit('new_message', messageData);
   }
 
   // Send tip notification to specific user

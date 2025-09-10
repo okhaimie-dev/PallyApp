@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../config/app_config.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
   final String email;
@@ -48,7 +49,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     while (retries > 0 && !success) {
       try {
         final response = await http.post(
-          Uri.parse('https://pallyapp.onrender.com/generate-otp'),
+          Uri.parse('${AppConfig.baseUrl}/generate-otp'),
           headers: {
             'Content-Type': 'application/json',
             'Connection': 'keep-alive',
@@ -109,7 +110,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://pallyapp.onrender.com/wallet'), // Use the new single endpoint
+        Uri.parse('${AppConfig.baseUrl}/wallet'), // Use the new single endpoint
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'email': widget.email,

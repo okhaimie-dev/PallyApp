@@ -64,7 +64,7 @@ To enable real email sending for OTP codes:
 
 3. **Test email connectivity:**
    ```bash
-   curl http://localhost:3000/test-email
+   curl http://192.168.0.106:3000/test-email
    ```
 
 **Note:** If email is not configured, the system will fall back to console logging for development.
